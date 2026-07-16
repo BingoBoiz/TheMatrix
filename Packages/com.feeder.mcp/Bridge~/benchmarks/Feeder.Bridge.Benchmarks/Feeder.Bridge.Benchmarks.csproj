@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Feeder.Bridge.Benchmarks</RootNamespace>
+    <AssemblyName>feeder-bridge-bench</AssemblyName>
+  </PropertyGroup>
+</Project>

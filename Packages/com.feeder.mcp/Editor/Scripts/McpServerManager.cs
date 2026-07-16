@@ -1,0 +1,1463 @@
+#nullable enable
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
+using System.Runtime.InteropServices;
+using System.Text.Json.Nodes;
+using System.Threading;
+using System.Threading.Tasks;
+using Feeder.ReflectorNet.Utils;
+using Feeder.MCP.Editor.UI;
+using Feeder.MCP.Editor.Utils;
+using Feeder.MCP.Runtime.Utils;
+using Feeder.MCP.Utils;
+using Microsoft.Extensions.Logging;
+using R3;
+using UnityEditor;
+using UnityEngine;
+using McpConsts = Feeder.McpPlugin.Common.Consts;
+
+namespace Feeder.MCP.Editor
+{
+    using static Feeder.McpPlugin.Common.Consts.MCP.Server;
+    using Consts = Feeder.McpPlugin.Common.Consts;
+    using ILogger = Microsoft.Extensions.Logging.ILogger;
+    using AiAgentConfig = Feeder.McpPlugin.AgentConfig.AiAgentConfig;
+
+    public enum McpServerStatus
+    {
+        Stopped,
+        Starting,
+        Running,
+        Stopping,
+        External,
+        // The server binary is being installed from the package's bundled copy. Distinct from Starting
+        // so the UI can show an honest "Installing server…" state instead of a misleading "Starting…"
+        // while the process has not been launched yet.
+        Installing
+    }
+
+    /// <summary>
+    /// Manages the MCP server binary and process lifecycle independently from UI.
+    /// Provides cross-platform support for Windows, macOS, and Linux.
+    /// </summary>
+    [InitializeOnLoad]
+    public static class McpServerManager
+    {
+        const string ProcessIdKey = "Feeder_MCP_ServerManager_ProcessId";
+        // Compatibility process/file name retained so existing AI-client configs keep working.
+        // The executable contents and metadata are the Feeder MCP Server.
+        const string McpServerProcessName = "gamedev-mcp-server";
+
+        static readonly ILogger _logger = UnityLoggerFactory.LoggerFactory.CreateLogger(typeof(McpServerManager));
+        static readonly ReactiveProperty<McpServerStatus> _serverStatus = new(McpServerStatus.Stopped);
+        // Last server-binary install failure reason, or null when there is no outstanding failure. The
+        // editor window observes this to surface the error + an "Install / Retry server" button. Cleared
+        // at the start of every install attempt and on a confirmed-current binary.
+        static readonly ReactiveProperty<string?> _lastInstallError = new(null);
+        static readonly object _processMutex = new();
+
+        static Process? _serverProcess;
+
+        // Single-flight guard for the server-binary install (0 = idle, 1 = an InstallServerBinary is in
+        // flight). Claimed atomically via Interlocked.CompareExchange in TryBeginInstall, released in
+        // EndInstall from InstallServerBinary's finally — so two concurrent triggers (the
+        // [InitializeOnLoad] static ctor plus a user-initiated menu/button path) can never run two
+        // colliding installs against the same staging area.
+        static int _installInProgress;
+
+        public static ReadOnlyReactiveProperty<McpServerStatus> ServerStatus => _serverStatus;
+
+        /// <summary>
+        /// Last server-binary install failure reason (null when none). The Matrix AI Connector window
+        /// subscribes to surface the failure + a retry button instead of silently dead-ending.
+        /// </summary>
+        public static ReadOnlyReactiveProperty<string?> LastInstallError => _lastInstallError;
+
+        public static bool IsRunning => _serverStatus.CurrentValue == McpServerStatus.Running;
+        public static bool IsStarting => _serverStatus.CurrentValue == McpServerStatus.Starting;
+
+        /// <summary>
+        /// True when a version-matching server binary is present on disk and can be launched without an
+        /// install. The Start path (<c>HandleServerButton</c>) uses this to decide whether to recover a
+        /// missing/outdated binary before launching.
+        /// </summary>
+        public static bool IsBinaryReadyToStart() => IsBinaryExists() && IsVersionMatches();
+
+        static McpServerManager()
+        {
+            // Register for editor quit to clean up the server process
+            EditorApplication.quitting += OnEditorQuitting;
+
+            // Check if server process is still running (e.g., after domain reload)
+            EditorApplication.update += CheckExistingProcess;
+
+            InstallServerBinaryIfNeeded(unattended: true)
+                .ContinueWith(task =>
+                {
+                    if (task.IsFaulted || !task.Result)
+                        return; // Failed to install binaries, skip auto-start
+
+                    if (EnvironmentUtils.IsCi())
+                        return; // Skip auto-start in CI environment
+
+                    EditorApplication.update += StartServerIfNeeded;
+                });
+        }
+
+        #region Binary Metadata
+
+        /// <summary>
+        /// The PINNED version of the bundled server release. MUST always equal the content of the
+        /// <c>version</c> file inside <c>Server~/&lt;rid&gt;/</c> in this package — the installer compares
+        /// the two to decide whether the cached binary in <c>Library/mcp-server</c> is current. Bumping
+        /// the server means replacing the whole <c>Server~/&lt;rid&gt;</c> payload AND this constant together.
+        /// </summary>
+        public const string ServerVersion = "0.2.0";
+
+        public const string ExecutableName = "gamedev-mcp-server";
+        public const string BundledServerArchiveName = "server-payload.zip";
+
+        public static string McpServerName
+            => string.IsNullOrEmpty(Application.productName)
+                ? "Unity Unknown"
+                : $"Unity {Application.productName}";
+
+        public static string OperationSystem =>
+            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "win" :
+            RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "osx" :
+            RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? "linux" :
+            "unknown";
+
+        public static string CpuArch => RuntimeInformation.ProcessArchitecture switch
+        {
+            Architecture.X86 => "x86",
+            Architecture.X64 => "x64",
+            Architecture.Arm => "arm",
+            Architecture.Arm64 => "arm64",
+            _ => "unknown"
+        };
+
+        public static string PlatformName => $"{OperationSystem}-{CpuArch}";
+
+        // Server executable file name
+        // Sample (mac linux): gamedev-mcp-server
+        // Sample   (windows): gamedev-mcp-server.exe
+        public static string ExecutableFullName
+            => ExecutableName.ToLowerInvariant() + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? ".exe"
+                : string.Empty);
+
+        // Full path to the server executable
+        // Sample (mac linux): ../Library/mcp-server
+        // Sample   (windows): ../Library/mcp-server
+        public static string ExecutableFolderRootPath
+            => Path.GetFullPath(
+                Path.Combine(
+                    Application.dataPath,
+                    "../Library",
+                    "mcp-server"
+                )
+            );
+
+        // Full path to the server executable
+        // Sample (mac linux): ../Library/mcp-server/osx-x64
+        // Sample   (windows): ../Library/mcp-server/win-x64
+        public static string ExecutableFolderPath
+            => Path.GetFullPath(
+                Path.Combine(
+                    ExecutableFolderRootPath,
+                    PlatformName
+                )
+            );
+
+        // Full path to the server executable
+        // Sample (mac linux): ../Library/mcp-server/osx-x64/gamedev-mcp-server
+        // Sample   (windows): ../Library/mcp-server/win-x64/gamedev-mcp-server.exe
+        public static string ExecutableFullPath
+            => Path.GetFullPath(
+                Path.Combine(
+                    ExecutableFolderPath,
+                    ExecutableFullName
+                )
+            );
+
+        public static string VersionFullPath
+            => Path.GetFullPath(
+                Path.Combine(
+                    ExecutableFolderPath,
+                    "version"
+                )
+            );
+
+        /// <summary>
+        /// The bundled server payload shipped inside this package at <c>Server~/&lt;rid&gt;/</c>.
+        /// The trailing '~' keeps the folder invisible to Unity's importer (no .meta files, no import
+        /// cost). The <c>version</c> file inside it must always equal <see cref="ServerVersion"/>.
+        /// </summary>
+        public static string BundledServerFolderPath
+            => Path.GetFullPath(
+                Path.Combine(
+                    UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(McpServerManager).Assembly)?.resolvedPath
+                        ?? Path.GetFullPath("Packages/com.feeder.mcp"),
+                    "Server~",
+                    PlatformName));
+
+        /// <summary>
+        /// Compressed server payload distributed with the package. Keeping the self-contained executable
+        /// inside an ordinary ZIP lets Git-hosted Unity packages stay below GitHub's per-file size limit
+        /// without requiring package consumers to install Git LFS or a separate .NET runtime.
+        /// </summary>
+        public static string BundledServerArchivePath
+            => Path.Combine(BundledServerFolderPath, BundledServerArchiveName);
+
+        #endregion // Binary Metadata
+
+        #region Binary Lifecycle
+
+        public static bool IsBinaryExists()
+        {
+            if (string.IsNullOrEmpty(ExecutableFullPath))
+                return false;
+
+            return File.Exists(ExecutableFullPath);
+        }
+
+        public static string? GetBinaryVersion()
+        {
+            if (!File.Exists(VersionFullPath))
+                return null;
+
+            return File.ReadAllText(VersionFullPath);
+        }
+
+        public static bool IsVersionMatches()
+        {
+            var binaryVersion = GetBinaryVersion();
+            if (binaryVersion == null)
+                return false;
+
+            // Compared against the pinned shared-server version, NOT the plugin version —
+            // the cached binary is a GameDev-MCP-Server release.
+            return binaryVersion == ServerVersion;
+        }
+
+        /// <param name="interactive">
+        /// When true (menu / user-initiated paths) a blocking <see cref="EditorUtility.DisplayDialog"/> asks the
+        /// user to retry/skip if the folder can't be deleted (e.g. the server is still holding a file lock).
+        /// When false (the unattended <c>[InitializeOnLoad]</c> / package-update download path) the blocking
+        /// dialog is SKIPPED — after the silent retries the failure is rethrown so the caller surfaces it via the
+        /// non-modal failure popup + retry button instead of freezing editor startup behind a modal (issue #845).
+        /// </param>
+        public static bool DeleteBinaryFolderIfExists(bool interactive = true)
+        {
+            if (Directory.Exists(ExecutableFolderRootPath))
+            {
+                // Intentional infinite loop (interactive path only):
+                // - Deletion can fail while the MCP server binaries are in use (e.g., server still running).
+                // - On the first failure, we automatically attempt to stop the server process via McpServerManager.
+                // - The retry/exit behavior is fully controlled by the user via the dialog below.
+                // - We do not impose a fixed maximum retry count so the user can take as long as needed
+                //   to shut down their MCP client and release file locks before trying again.
+                // - The loop terminates when the user selects "Skip", at which point the exception is rethrown.
+                // In the unattended path the blocking dialog is skipped: after the silent retries the exception
+                // is rethrown so the download path fails-loud (non-modal popup) instead of blocking startup.
+                var silentRetries = 0;
+                while (true)
+                {
+                    try
+                    {
+                        Directory.Delete(ExecutableFolderRootPath, recursive: true);
+                        UnityEngine.Debug.Log($"Deleted existing MCP server folder: <color=orange>{ExecutableFolderRootPath}</color>");
+                        return true;
+                    }
+                    catch (Exception ex)
+                    {
+                        // First failure: try to stop the running server process that may be locking files
+                        if (silentRetries == 0)
+                        {
+                            silentRetries++;
+                            UnityEngine.Debug.Log($"Failed to delete MCP server folder. Attempting to stop the server process...");
+                            try
+                            {
+                                if (!StopServer(force: true))
+                                {
+                                    UnityEngine.Debug.LogWarning($"No running MCP server process found to stop.");
+                                }
+                                else
+                                {
+                                    UnityEngine.Debug.Log($"Stop signal sent to MCP server process. Retrying deletion...");
+                                    Thread.Sleep(2000); // Wait a moment for the process to exit and release file locks
+                                }
+                            }
+                            catch (Exception stopEx)
+                            {
+                                UnityEngine.Debug.LogWarning($"Failed to stop MCP server: {stopEx.Message}");
+                            }
+                            continue; // Retry deletion after stopping the server
+                        }
+
+                        // Second failure: retry once more silently (OS may need time to release file locks)
+                        if (silentRetries <= 1)
+                        {
+                            silentRetries++;
+                            continue;
+                        }
+
+                        // Unattended path: never block startup behind a modal — rethrow so the caller
+                        // surfaces the failure via the non-modal popup + retry button (issue #845).
+                        if (!interactive)
+                        {
+                            UnityEngine.Debug.LogError(
+                                $"Failed to delete MCP server folder (unattended): {ex.Message}");
+                            throw;
+                        }
+
+                        var retry = EditorUtility.DisplayDialog(
+                            title: "Failed to Delete MCP Server Binaries",
+                            message: $"The current Feeder MCP server binaries can't be deleted. " +
+                                $"This is very likely because the MCP server is currently running.\n\n" +
+                                $"Please close your MCP client to make sure the server is not running, then click \"Retry\".\n\n" +
+                                $"Path: {ExecutableFolderRootPath}\n\n" +
+                                $"Error: {ex.Message}",
+                            ok: "Retry",
+                            cancel: "Skip"
+                        );
+
+                        if (!retry)
+                        {
+                            throw;
+                        }
+                        // If retry is true, loop continues and tries again
+                    }
+                }
+            }
+            return false;
+        }
+
+        /// <param name="unattended">
+        /// When true (the <c>[InitializeOnLoad]</c> editor-startup path) the install runs without any
+        /// blocking modal and without the result popup — failures are surfaced only through
+        /// <see cref="LastInstallError"/> (the in-window error + retry button). When false (menu /
+        /// Start button / retry button — user-initiated) the result popup is shown and the delete step
+        /// may prompt interactively.
+        /// </param>
+        /// <param name="force">Reinstall from the bundled copy even when a version-matching binary is
+        /// already present in the cache folder.</param>
+        public static Task<bool> InstallServerBinaryIfNeeded(bool unattended = false, bool force = false)
+        {
+            if (EnvironmentUtils.IsCi())
+            {
+                // Ignore in CI environment
+                UnityEngine.Debug.Log($"Ignore MCP server install in CI environment");
+                return Task.FromResult(false);
+            }
+
+            // Cheap best-effort early-out: if an install already advanced the lifecycle machine to
+            // Installing, skip re-entering InstallServerBinary at all. This is only an OPTIMIZATION —
+            // the authoritative single-flight guard is InstallServerBinary's atomic TryBeginInstall.
+            if (_serverStatus.CurrentValue == McpServerStatus.Installing)
+                return Task.FromResult(true); // install already in progress; let it complete
+
+            if (!force && IsBinaryExists() && IsVersionMatches())
+            {
+                // Binary is present and current — clear any stale failure so the window hides the error/retry UI.
+                _lastInstallError.Value = null;
+                return Task.FromResult(true);
+            }
+
+            return Task.FromResult(InstallServerBinary(unattended));
+        }
+
+        /// <summary>
+        /// Installs the bundled server payload (<see cref="BundledServerArchivePath"/>) into the per-RID
+        /// cache folder (<see cref="ExecutableFolderPath"/>) ATOMICALLY: the payload is first extracted into a
+        /// SAME-VOLUME staging folder (binary + sidecars + exec bit + version marker), and only then
+        /// published with a single <see cref="Directory.Move"/> rename. The destination folder therefore
+        /// never exists in a partial state: it is either absent or complete. The old working binary is left
+        /// untouched until the replacement is fully staged.
+        /// </summary>
+        static bool InstallServerBinary(bool unattended = false)
+        {
+            // SINGLE-FLIGHT GUARD: atomically claim the one install slot so two concurrent triggers
+            // (the [InitializeOnLoad] static ctor and a user-initiated menu/button path) never run
+            // two colliding installs against the cache folder. Released in the finally.
+            if (!TryBeginInstall())
+                return true; // an install is already in progress; let it complete
+
+            string? stagingRoot = null;
+            try
+            {
+                // Clear any prior failure + reflect the in-progress install in the status machine.
+                _lastInstallError.Value = null;
+                SetInstallingStatus();
+
+                var previousKeepServerRunning = UnityMcpPluginEditor.KeepServerRunning;
+
+                var bundledBinary = Path.Combine(BundledServerFolderPath, ExecutableFullName);
+                var hasArchive = File.Exists(BundledServerArchivePath);
+                var hasUnpackedPayload = File.Exists(bundledBinary);
+                if (!hasArchive && !hasUnpackedPayload)
+                {
+                    return FailInstall(
+                        $"Bundled server payload missing. Expected '{BundledServerArchivePath}' " +
+                        $"or development binary '{bundledBinary}'. Restore the 'Server~/{PlatformName}' " +
+                        "folder inside the com.feeder.mcp package.", unattended);
+                }
+
+                var payloadSource = hasArchive ? BundledServerArchivePath : BundledServerFolderPath;
+                UnityEngine.Debug.Log($"Installing MCP server binary from bundled payload: <color=yellow>{payloadSource}</color>");
+
+                // Stage the fully-prepared payload as a SIBLING of the cache root (same volume) so the
+                // final publish is an atomic rename, never a cross-volume copy interrupted mid-write.
+                stagingRoot = Path.GetFullPath($"{ExecutableFolderRootPath}-staging-{Guid.NewGuid():N}");
+                if (hasArchive)
+                    ExtractServerArchive(BundledServerArchivePath, stagingRoot);
+                else
+                    CopyDirectory(BundledServerFolderPath, stagingRoot, excludeDirectoryName: "logs");
+
+                var stagedBinary = Path.Combine(stagingRoot, ExecutableFullName);
+                if (!File.Exists(stagedBinary))
+                    throw new InvalidDataException(
+                        $"Bundled server payload does not contain the expected executable '{ExecutableFullName}'.");
+
+                // Set executable permission on macOS and Linux BEFORE publishing, so the published payload
+                // is launch-ready the instant it appears under the cache folder.
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    UnixUtils.Set0755(stagedBinary);
+
+                // The version marker travels with the payload, so the published per-RID folder is complete
+                // the instant it appears — no window where the binary exists without its version file.
+                File.WriteAllText(Path.Combine(stagingRoot, "version"), ServerVersion);
+
+                // Stop the running server + remove the OLD cache folder. Only now do we touch the live
+                // binary; everything above operated on staging. Unattended path never blocks behind a
+                // modal (see DeleteBinaryFolderIfExists).
+                DeleteBinaryFolderIfExists(interactive: !unattended);
+
+                // Atomic publish: a single same-volume rename of the fully-prepared payload.
+                PublishStagedBinary(stagingRoot, ExecutableFolderPath);
+                stagingRoot = null; // ownership transferred to the cache folder
+
+                var success = IsBinaryExists() && IsVersionMatches();
+                if (!success)
+                {
+                    return FailInstall(
+                        $"Server binary missing or version mismatch after install at: {ExecutableFullPath}", unattended);
+                }
+
+                UnityEngine.Debug.Log($"Installed MCP server binary to: <color=green>{ExecutableFullPath}</color>");
+
+                if (previousKeepServerRunning && IsAutoStartAllowedForMode(UnityMcpPluginEditor.ConnectionMode))
+                {
+                    // StartServer() moves the status machine Installing -> Starting. If it early-returns
+                    // false it never wrote Starting, so the status is still Installing — reset it to
+                    // Stopped so the UI does not hang on "Installing server…".
+                    if (!StartServer())
+                    {
+                        UnityEngine.Debug.LogError($"Failed to start MCP server after installing binary. Please try starting the server manually.");
+                        ResetInstallingToStopped();
+                    }
+                }
+                else
+                {
+                    if (previousKeepServerRunning)
+                        _logger.LogDebug("InstallServerBinary: Cloud mode active, skipping local server auto-start after binary install");
+                    ResetInstallingToStopped();
+                }
+
+                if (!unattended)
+                    ShowUpdateResultPopup(success: true);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                UnityEngine.Debug.LogException(ex);
+                return FailInstall($"Failed to install server binary: {ex.Message}", unattended);
+            }
+            finally
+            {
+                // Release the single-flight install slot claimed at entry so a later retry can proceed.
+                EndInstall();
+
+                if (stagingRoot != null)
+                {
+                    try { if (Directory.Exists(stagingRoot)) Directory.Delete(stagingRoot, recursive: true); }
+                    catch { /* best effort */ }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Recursively copies <paramref name="sourceDir"/> into <paramref name="destDir"/> (created when
+        /// missing), optionally skipping any directory named <paramref name="excludeDirectoryName"/>
+        /// (case-insensitive) at any depth — used to keep runtime 'logs' out of the staged payload.
+        /// </summary>
+        static void CopyDirectory(string sourceDir, string destDir, string? excludeDirectoryName = null)
+        {
+            Directory.CreateDirectory(destDir);
+            foreach (var file in Directory.GetFiles(sourceDir))
+                File.Copy(file, Path.Combine(destDir, Path.GetFileName(file)), overwrite: true);
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                var name = Path.GetFileName(dir);
+                if (excludeDirectoryName != null && string.Equals(name, excludeDirectoryName, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                CopyDirectory(dir, Path.Combine(destDir, name), excludeDirectoryName);
+            }
+        }
+
+        /// <summary>
+        /// Extracts the package-owned ZIP payload into an empty staging folder. Every entry is resolved and
+        /// checked against the destination root before it is written, preventing a malformed archive from
+        /// escaping the project's Library folder through absolute paths or ".." traversal.
+        /// </summary>
+        internal static void ExtractServerArchive(string archivePath, string destDir)
+        {
+            Directory.CreateDirectory(destDir);
+
+            var destinationRoot = Path.GetFullPath(destDir)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                + Path.DirectorySeparatorChar;
+            var pathComparison = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
+
+            using var archiveStream = new FileStream(
+                archivePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read, leaveOpen: false);
+            foreach (var entry in archive.Entries)
+            {
+                var destinationPath = Path.GetFullPath(Path.Combine(destDir, entry.FullName));
+                if (!destinationPath.StartsWith(destinationRoot, pathComparison))
+                    throw new InvalidDataException(
+                        $"Server payload entry escapes the install folder: '{entry.FullName}'.");
+
+                // ZIP directory entries have an empty Name. Create them explicitly; file entries create
+                // their own parents so archives without explicit directory records work as well.
+                if (string.IsNullOrEmpty(entry.Name))
+                {
+                    Directory.CreateDirectory(destinationPath);
+                    continue;
+                }
+
+                var parent = Path.GetDirectoryName(destinationPath);
+                if (!string.IsNullOrEmpty(parent))
+                    Directory.CreateDirectory(parent);
+
+                using var source = entry.Open();
+                using var destination = new FileStream(
+                    destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                source.CopyTo(destination);
+            }
+        }
+
+        /// <summary>
+        /// Records an install failure: logs it, stores the reason in <see cref="LastInstallError"/> (so the
+        /// window shows the error + retry button), returns the status machine to Stopped, and — for
+        /// user-initiated (non-unattended) calls — shows the "Install Failed" popup. Always returns false so
+        /// it can be used as the single return expression of every failure branch.
+        /// </summary>
+        static bool FailInstall(string reason, bool unattended)
+        {
+            UnityEngine.Debug.LogError($"MCP server binary install failed: {reason}");
+            _lastInstallError.Value = reason;
+            ResetInstallingToStopped();
+            if (!unattended)
+                ShowUpdateResultPopup(success: false);
+            return false;
+        }
+
+        /// <summary>Moves the status machine into Installing from an idle state (Stopped/Installing only).</summary>
+        static void SetInstallingStatus()
+        {
+            var current = _serverStatus.CurrentValue;
+            if (current == McpServerStatus.Stopped || current == McpServerStatus.Installing)
+                _serverStatus.Value = McpServerStatus.Installing;
+        }
+
+        /// <summary>Returns the status machine to Stopped, but ONLY if it is still Installing (so it never
+        /// stomps a Starting/Running/Stopping state that a concurrent path may have moved it to).</summary>
+        static void ResetInstallingToStopped()
+        {
+            if (_serverStatus.CurrentValue == McpServerStatus.Installing)
+                _serverStatus.Value = McpServerStatus.Stopped;
+        }
+
+        /// <summary>
+        /// Atomically claims the single server-binary install slot. Returns true when THIS caller acquired
+        /// it (and must eventually release it via <see cref="EndInstall"/>), or false when an install is
+        /// already in flight and the caller must no-op.
+        /// </summary>
+        internal static bool TryBeginInstall()
+            => Interlocked.CompareExchange(ref _installInProgress, 1, 0) == 0;
+
+        /// <summary>Releases the single install slot claimed by <see cref="TryBeginInstall"/>.</summary>
+        internal static void EndInstall()
+            => Interlocked.Exchange(ref _installInProgress, 0);
+
+        /// <summary>True while a server-binary install slot is currently held (diagnostic / test view).</summary>
+        internal static bool IsInstallInProgress
+            => Volatile.Read(ref _installInProgress) != 0;
+
+        /// <summary>Shows the non-modal server-binary install result popup (success or failure).</summary>
+        static void ShowUpdateResultPopup(bool success)
+        {
+            NotificationPopupWindow.Show(
+                windowTitle: success ? "Installed" : "Install Failed",
+                height: 235,
+                minHeight: 235,
+                title: success ? "Server Binary Installed" : "Server Binary Install Failed",
+                message: success
+                    ? "The MCP server binary was installed from the package's bundled copy. \n\n" +
+                        $"Version: {GetBinaryVersion()}\n\n" +
+                        "You may need to restart your AI agent to reconnect to the updated server."
+                    : "Failed to install the MCP server binary. Please check the logs for details.");
+        }
+
+        /// <summary>
+        /// Atomically publishes a fully-prepared staged payload folder into <paramref name="destFolder"/> via a
+        /// single same-volume <see cref="Directory.Move"/>. Ensures the destination's parent exists and removes
+        /// any existing destination first (Directory.Move requires the target to not exist). The caller
+        /// guarantees <paramref name="stagedFolder"/> and <paramref name="destFolder"/> share a volume (staging
+        /// is a sibling of the cache root) so the rename is atomic, never a partial cross-volume copy.
+        /// </summary>
+        internal static void PublishStagedBinary(string stagedFolder, string destFolder)
+        {
+            var parent = Path.GetDirectoryName(destFolder);
+            if (!string.IsNullOrEmpty(parent) && !Directory.Exists(parent))
+                Directory.CreateDirectory(parent);
+
+            if (Directory.Exists(destFolder))
+                Directory.Delete(destFolder, recursive: true);
+
+            Directory.Move(stagedFolder, destFolder);
+        }
+
+        #endregion // Binary Lifecycle
+
+        #region Client Configuration
+
+        /// <summary>
+        /// Generates a JSON configuration for stdio transport.
+        /// <code>
+        /// {
+        ///   "mcpServers": {
+        ///     "Unity ProjectName": {
+        ///       "type": "...",    // optional, only if provided
+        ///       "command": "path/to/feeder-mcp-server",
+        ///       "args": ["port=...", "plugin-timeout=...", "client-transport=stdio" /*, "token=..." if auth required */]
+        ///     }
+        ///   }
+        /// }
+        /// </code>
+        /// </summary>
+        public static JsonNode RawJsonConfigurationStdio(
+            int port,
+            string bodyPath = "mcpServers",
+            int timeoutMs = Consts.Hub.DefaultTimeoutMs,
+            string? type = null)
+        {
+            var pathSegments = BodyPathSegments(bodyPath);
+
+            // Build innermost content first
+            var serverConfig = new JsonObject();
+
+            if (type != null)
+                serverConfig["type"] = type;
+
+            serverConfig["command"] = ExecutableFullPath.Replace('\\', '/');
+
+            var args = new JsonArray
+            {
+                $"{Args.Port}={port}",
+                $"{Args.PluginTimeout}={timeoutMs}",
+                $"{Args.ClientTransportMethod}={TransportMethod.stdio}",
+                $"{Args.Authorization}={UnityMcpPluginEditor.AuthOption}"
+            };
+
+            var authRequired = UnityMcpPluginEditor.AuthOption == AuthOption.required;
+            if (authRequired && !string.IsNullOrEmpty(UnityMcpPluginEditor.Token))
+                args.Add($"{Args.Token}={UnityMcpPluginEditor.Token}");
+
+            serverConfig["args"] = args;
+
+            var innerContent = new JsonObject
+            {
+                ["Feeder-MCP"] = serverConfig
+            };
+
+            // Build nested structure from innermost to outermost
+            var result = innerContent;
+            for (int i = pathSegments.Length - 1; i >= 0; i--)
+            {
+                result = new JsonObject { [pathSegments[i]] = result };
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Generates a JSON configuration for HTTP transport.
+        /// <code>
+        /// {
+        ///   "mcpServers": {
+        ///     "Unity ProjectName": {
+        ///       "type": "...",  // optional, only if provided
+        ///       "url": "http://localhost:port",
+        ///      "headers": {     // only if token is provided
+        ///        "Authorization": "Bearer token"
+        ///      }
+        ///     }
+        ///   }
+        /// }
+        /// </code>
+        /// </summary>
+        public static JsonNode RawJsonConfigurationHttp(
+            string url,
+            string bodyPath = "mcpServers",
+            string? type = null)
+        {
+            var pathSegments = BodyPathSegments(bodyPath);
+
+            // Build innermost content first
+            var serverConfig = new JsonObject();
+
+            if (type != null)
+                serverConfig["type"] = type;
+
+            serverConfig["url"] = GetMcpEndpointUrl(url);
+
+            var authRequired = UnityMcpPluginEditor.AuthOption == AuthOption.required;
+            if (authRequired && !string.IsNullOrEmpty(UnityMcpPluginEditor.Token))
+            {
+                serverConfig["headers"] = new JsonObject
+                {
+                    ["Authorization"] = $"Bearer {UnityMcpPluginEditor.Token}"
+                };
+            }
+
+            var innerContent = new JsonObject
+            {
+                ["Feeder-MCP"] = serverConfig
+            };
+
+            // Build nested structure from innermost to outermost
+            var result = innerContent;
+            for (int i = pathSegments.Length - 1; i >= 0; i--)
+            {
+                result = new JsonObject { [pathSegments[i]] = result };
+            }
+
+            return result;
+        }
+
+        #endregion // Client Configuration
+
+        #region Process Lifecycle
+
+        static void CheckExistingProcess()
+        {
+            EditorApplication.update -= CheckExistingProcess;
+            // Try to find an existing server process by checking if our tracked PID is still running
+            // This helps maintain state across domain reloads
+            var savedPid = EditorPrefs.GetInt(ProcessIdKey, -1);
+            if (savedPid > 0)
+            {
+                try
+                {
+                    var process = Process.GetProcessById(savedPid);
+                    if (process != null && !process.HasExited)
+                    {
+                        var processName = process.ProcessName.ToLowerInvariant();
+                        if (processName.Contains(McpServerProcessName))
+                        {
+                            _serverProcess = process;
+                            _serverStatus.Value = McpServerStatus.Running;
+                            _logger.LogInformation("Reconnected to existing MCP server process (PID: {pid})", savedPid);
+
+                            // Re-attach exit handler
+                            process.EnableRaisingEvents = true;
+                            process.Exited += OnProcessExited;
+
+                            // Schedule verification check to detect if process crashes shortly after reconnection
+                            ScheduleStartupVerification(savedPid);
+                            return;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug("Could not reconnect to previous process: {message}", ex.Message);
+                }
+
+                // Clear stale PID
+                EditorPrefs.DeleteKey(ProcessIdKey);
+            }
+        }
+
+        static void OnEditorQuitting()
+        {
+            StopServer(force: true);
+        }
+
+        public static bool StartServer()
+        {
+            lock (_processMutex)
+            {
+                if (_serverStatus.CurrentValue == McpServerStatus.Running ||
+                    _serverStatus.CurrentValue == McpServerStatus.Starting ||
+                    _serverStatus.CurrentValue == McpServerStatus.Stopping)
+                {
+                    _logger.LogWarning("MCP server is already {status}", _serverStatus.CurrentValue);
+                    return false;
+                }
+
+                if (!IsBinaryExists())
+                {
+                    _logger.LogError("MCP server binary not found at: {path}", ExecutableFullPath);
+                    return false;
+                }
+
+                _serverStatus.Value = McpServerStatus.Starting;
+
+                // Kill any orphaned server processes to free the port
+                KillOrphanedServerProcesses();
+
+                try
+                {
+                    var executablePath = ExecutableFullPath;
+                    var arguments = BuildArguments();
+
+                    _logger.LogInformation("Starting MCP server: {path} {args}", executablePath, arguments);
+
+                    var startInfo = new ProcessStartInfo
+                    {
+                        FileName = executablePath,
+                        Arguments = arguments,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        WorkingDirectory = ExecutableFolderPath
+                    };
+                    startInfo.EnvironmentVariables["FEEDER_BRIDGE_FILE_LOG_ONLY"] = "1";
+
+                    // Set executable permissions on Unix-like systems
+                    if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        UnixUtils.Set0755(executablePath);
+                    }
+
+                    _serverProcess = new Process
+                    {
+                        StartInfo = startInfo,
+                        EnableRaisingEvents = true
+                    };
+                    _serverProcess.Exited += OnProcessExited;
+                    _serverProcess.OutputDataReceived += OnOutputDataReceived;
+                    _serverProcess.ErrorDataReceived += OnErrorDataReceived;
+
+                    if (!_serverProcess.Start())
+                    {
+                        _logger.LogError("Failed to start MCP server process");
+                        CleanupProcess();
+                        return false;
+                    }
+
+                    _serverProcess.BeginOutputReadLine();
+                    _serverProcess.BeginErrorReadLine();
+
+                    // Save PID for reconnection after domain reload
+                    EditorPrefs.SetInt(ProcessIdKey, _serverProcess.Id);
+
+                    // Keep status as Starting - it will be set to Running after verification
+                    _logger.LogInformation("MCP server process started (PID: {pid}), awaiting verification...", _serverProcess.Id);
+
+                    // Schedule a delayed check to verify the process is still running
+                    // This catches early crashes that might not trigger the Exited event reliably
+                    // Status will be set to Running only after successful verification
+                    ScheduleStartupVerification(_serverProcess.Id);
+
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Failed to start MCP server: {message}", ex.Message);
+                    CleanupProcess();
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Stops the MCP server process.
+        /// By default, this method is non-blocking: it sends the kill/terminate signal
+        /// and lets the Exited event handler perform cleanup asynchronously.
+        /// When force is true (e.g., editor quitting), it blocks until the process exits.
+        /// </summary>
+        public static bool StopServer(bool force = false)
+        {
+            lock (_processMutex)
+            {
+                if (_serverStatus.CurrentValue == McpServerStatus.Stopped ||
+                    _serverStatus.CurrentValue == McpServerStatus.Stopping)
+                {
+                    _logger.LogDebug("MCP server is already stopped or stopping");
+                    return true;
+                }
+
+                if (_serverProcess == null)
+                {
+                    _serverStatus.Value = McpServerStatus.Stopped;
+                    EditorPrefs.DeleteKey(ProcessIdKey);
+                    return true;
+                }
+
+                _serverStatus.Value = McpServerStatus.Stopping;
+
+                try
+                {
+                    _logger.LogInformation("Stopping MCP server (PID: {pid})", _serverProcess.Id);
+
+                    if (!_serverProcess.HasExited)
+                    {
+                        SendTerminateSignal();
+                    }
+
+                    if (force)
+                    {
+                        // Synchronous path: block until exit (used during editor quitting)
+                        WaitForExitAndForceKillIfNeeded();
+                        CleanupProcess();
+                    }
+                    else
+                    {
+                        if (_serverProcess.HasExited)
+                        {
+                            CleanupProcess();
+                        }
+                        else
+                        {
+                            // Non-blocking path: schedule background wait + force kill safety net.
+                            // CleanupProcess will be called by OnProcessExited or the background task.
+                            ScheduleForceKillIfNeeded();
+                        }
+                    }
+
+                    _logger.LogInformation("MCP server stop initiated");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError("Error stopping MCP server: {message}", ex.Message);
+                    CleanupProcess();
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sends the platform-appropriate terminate signal without waiting for exit.
+        /// </summary>
+        static void SendTerminateSignal()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                _serverProcess!.Kill();
+            }
+            else
+            {
+                // On Unix-like systems, send SIGTERM for graceful shutdown
+                try
+                {
+                    using var killProcess = Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "kill",
+                        Arguments = $"-TERM {_serverProcess!.Id}",
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    });
+                    killProcess?.WaitForExit(1000);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug("SIGTERM failed, falling back to Kill(): {message}", ex.Message);
+                    _serverProcess!.Kill();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Blocking wait for process exit, with force-kill fallback.
+        /// Used only during editor quitting to prevent orphaned processes.
+        /// </summary>
+        static void WaitForExitAndForceKillIfNeeded()
+        {
+            if (_serverProcess == null || _serverProcess.HasExited)
+                return;
+
+            if (!_serverProcess.WaitForExit(5000))
+            {
+                _logger.LogWarning("MCP server did not exit gracefully, forcing termination");
+                try
+                {
+                    _serverProcess.Kill();
+                    _serverProcess.WaitForExit(2000);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug("Force kill failed: {message}", ex.Message);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Background safety net: waits for the process to exit and force-kills after timeout.
+        /// Calls CleanupProcess on the main thread when done.
+        /// </summary>
+        static void ScheduleForceKillIfNeeded()
+        {
+            var process = _serverProcess;
+            if (process == null)
+                return;
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    if (!process.HasExited && !process.WaitForExit(5000))
+                    {
+                        _logger.LogWarning("MCP server did not exit gracefully, forcing termination");
+                        try
+                        {
+                            process.Kill();
+                            process.WaitForExit(2000);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug("Force kill error: {message}", ex.Message);
+                        }
+                    }
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _logger.LogDebug("Process already exited or disposed while waiting for exit: {message}", ex.Message);
+                }
+
+                // Ensure cleanup on the main thread.
+                // Safe to call even if OnProcessExited already triggered cleanup.
+                MainThread.Instance.Run(CleanupProcess);
+            });
+        }
+
+        /// <summary>
+        /// Kills an orphaned gamedev-mcp-server process that is occupying this project's port.
+        /// Only targets the specific process listening on <see cref="UnityMcpPluginEditor.Port"/>.
+        /// If the port owner cannot be determined, does nothing (fails safe).
+        /// </summary>
+        static void KillOrphanedServerProcesses()
+        {
+            try
+            {
+                var port = UnityMcpPluginEditor.Port;
+                var currentPid = _serverProcess?.Id ?? -1;
+
+                var listeningPid = GetPidListeningOnPort(port);
+
+                if (listeningPid <= 0)
+                {
+                    _logger.LogDebug("No process found listening on port {port}, port is available", port);
+                    return;
+                }
+
+                if (listeningPid == currentPid)
+                {
+                    _logger.LogDebug("Our own server process (PID: {pid}) is listening on port {port}", listeningPid, port);
+                    return;
+                }
+
+                try
+                {
+                    using var process = Process.GetProcessById(listeningPid);
+                    if (process == null || process.HasExited)
+                    {
+                        _logger.LogDebug("Process (PID: {pid}) on port {port} has already exited", listeningPid, port);
+                        return;
+                    }
+
+                    var processName = process.ProcessName.ToLowerInvariant();
+                    if (!processName.Contains(McpServerProcessName))
+                    {
+                        _logger.LogWarning(
+                            "Port {port} is occupied by a non-MCP process '{processName}' (PID: {pid}). " +
+                            "The MCP server may fail to start. Please free the port or change the port in settings.",
+                            port, process.ProcessName, listeningPid);
+                        return;
+                    }
+
+                    _logger.LogWarning("Killing orphaned MCP server process (PID: {pid}) occupying port {port}", listeningPid, port);
+                    process.Kill();
+
+                    if (!process.WaitForExit(3000))
+                        _logger.LogWarning("Orphaned MCP server process (PID: {pid}) did not exit within 3 seconds after kill", listeningPid);
+                    else
+                        _logger.LogDebug("Orphaned MCP server process (PID: {pid}) exited successfully", listeningPid);
+                }
+                catch (ArgumentException)
+                {
+                    _logger.LogDebug("Process (PID: {pid}) on port {port} no longer exists", listeningPid, port);
+                }
+                catch (InvalidOperationException)
+                {
+                    _logger.LogDebug("Process (PID: {pid}) on port {port} exited before it could be terminated", listeningPid, port);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug("Failed to kill orphaned process (PID: {pid}) on port {port}: {message}", listeningPid, port, ex.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("Error in orphaned server process cleanup: {message}", ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Returns the PID of the process listening on the specified TCP port,
+        /// or -1 if no process is found or the lookup fails.
+        /// </summary>
+        static int GetPidListeningOnPort(int port)
+        {
+            try
+            {
+                var startInfo = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? new ProcessStartInfo
+                    {
+                        FileName = "netstat",
+                        Arguments = "-ano -p tcp",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true
+                    }
+                    : new ProcessStartInfo
+                    {
+                        FileName = "lsof",
+                        Arguments = $"-ti tcp:{port} -sTCP:LISTEN",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+
+                using var process = Process.Start(startInfo);
+                if (process == null) return -1;
+
+                var output = process.StandardOutput.ReadToEnd();
+                process.WaitForExit(5000);
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    var portSuffix = $":{port}";
+                    foreach (var line in output.Split('\n'))
+                    {
+                        var trimmed = line.Trim();
+                        if (!trimmed.Contains("LISTENING"))
+                            continue;
+
+                        var parts = trimmed.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+                        if (parts.Length < 5)
+                            continue;
+
+                        var localAddress = parts[1];
+                        if (localAddress.EndsWith(portSuffix) && int.TryParse(parts[parts.Length - 1], out var pid))
+                            return pid;
+                    }
+                }
+                else
+                {
+                    var trimmed = output.Trim();
+                    if (string.IsNullOrEmpty(trimmed))
+                        return -1;
+
+                    var firstLine = trimmed.Split('\n')[0].Trim();
+                    if (int.TryParse(firstLine, out var pid))
+                        return pid;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("Failed to determine PID listening on port {port}: {message}", port, ex.Message);
+            }
+
+            return -1;
+        }
+
+        static string BuildArguments()
+        {
+            var port = UnityMcpPluginEditor.Port;
+            var timeout = UnityMcpPluginEditor.TimeoutMs;
+            var token = UnityMcpPluginEditor.Token;
+            var authOption = UnityMcpPluginEditor.AuthOption;
+
+            var args =
+                $"--FeederBridge:Port={port} " +
+                $"--FeederBridge:DefaultToolTimeout={TimeSpan.FromMilliseconds(timeout):c} " +
+                $"--FeederBridge:RequireAuth={authOption == AuthOption.required}";
+
+            if (authOption == AuthOption.required && !string.IsNullOrEmpty(token))
+                args += $" --FeederBridge:Token={token}";
+
+            return args;
+        }
+
+        /// <summary>Normalizes a local bridge URL to the MCP Streamable HTTP endpoint.</summary>
+        public static string GetMcpEndpointUrl(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url))
+                return url;
+
+            var normalized = url.TrimEnd('/');
+            return normalized.EndsWith("/mcp", StringComparison.OrdinalIgnoreCase)
+                ? normalized
+                : normalized + "/mcp";
+        }
+
+        /// <summary>
+        /// Schedules a verification check 5 seconds after startup to detect early crashes.
+        /// If the process is still running after verification, the status is set to Running.
+        /// If the process has exited and no longer exists, the status is set to Stopped.
+        /// </summary>
+        static void ScheduleStartupVerification(int processId)
+        {
+            var startTime = DateTime.UtcNow;
+            const double verificationDelaySeconds = 5.0;
+
+            void CheckProcess()
+            {
+                // If status is no longer Starting (e.g., OnProcessExited already cleaned up), unsubscribe
+                if (_serverStatus.CurrentValue != McpServerStatus.Starting)
+                {
+                    EditorApplication.update -= CheckProcess;
+                    return;
+                }
+
+                var elapsed = DateTime.UtcNow - startTime;
+
+                // If we haven't reached verification delay yet, wait for next frame
+                if (elapsed.TotalSeconds < verificationDelaySeconds)
+                    return;
+
+                // Detect early process exit before the verification delay
+                // This catches crashes that happen within the first few seconds (e.g., port already in use)
+                if (!IsProcessRunning(processId))
+                {
+                    _logger.LogError("MCP server process (PID: {pid}) exited early within {seconds:F1} seconds after launch",
+                        processId, elapsed.TotalSeconds);
+
+                    EditorApplication.update -= CheckProcess;
+                    if (_serverStatus.CurrentValue == McpServerStatus.Starting)
+                        CleanupProcess();
+                    return;
+                }
+
+                // Process is still running after the verification delay - mark as Running
+                _logger.LogDebug("MCP server process (PID: {pid}) is still running after {seconds:F1}s verification",
+                    processId, elapsed.TotalSeconds);
+
+                EditorApplication.update -= CheckProcess;
+                if (_serverStatus.CurrentValue == McpServerStatus.Starting)
+                {
+                    _serverStatus.Value = McpServerStatus.Running;
+                    _logger.LogInformation("MCP server verified and running (PID: {pid})", processId);
+                }
+            }
+
+            EditorApplication.update += CheckProcess;
+        }
+
+        /// <summary>
+        /// Checks if a process with the given ID is still running and is the MCP server.
+        /// </summary>
+        static bool IsProcessRunning(int processId)
+        {
+            try
+            {
+                var process = Process.GetProcessById(processId);
+                if (process == null || process.HasExited)
+                    return false;
+
+                var processName = process.ProcessName.ToLowerInvariant();
+                return processName.Contains(McpServerProcessName);
+            }
+            catch (ArgumentException)
+            {
+                // Process with this ID does not exist
+                return false;
+            }
+            catch (InvalidOperationException)
+            {
+                // Process has exited
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug("Error checking process status: {message}", ex.Message);
+                return false;
+            }
+        }
+
+        static void OnProcessExited(object? sender, EventArgs e)
+        {
+            _logger.LogInformation("MCP server process exited");
+            // Marshal to main thread since this event is raised from a thread pool thread
+            // and CleanupProcess modifies reactive properties that may be observed on the main thread
+            MainThread.Instance.Run(CleanupProcess);
+        }
+
+        static void OnOutputDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                _logger.LogDebug("[MCP Server] {output}", e.Data);
+            }
+        }
+
+        static void OnErrorDataReceived(object sender, DataReceivedEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(e.Data))
+            {
+                _logger.LogWarning("[MCP Server Error] {error}", e.Data);
+            }
+        }
+
+        static void CleanupProcess()
+        {
+            _logger.LogDebug("Cleaning up MCP server process resources");
+            lock (_processMutex)
+            {
+                var processToDispose = _serverProcess;
+                _serverProcess = null;
+
+                if (processToDispose != null)
+                {
+                    processToDispose.Exited -= OnProcessExited;
+                    processToDispose.OutputDataReceived -= OnOutputDataReceived;
+                    processToDispose.ErrorDataReceived -= OnErrorDataReceived;
+
+                    // Dispose on a background thread to prevent deadlock.
+                    // Process.Dispose() can hang on the main thread when redirected
+                    // stdout/stderr streams are active, even after CancelOutputRead/CancelErrorRead.
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            try { processToDispose.CancelOutputRead(); } catch { }
+                            try { processToDispose.CancelErrorRead(); } catch { }
+                            processToDispose.Dispose();
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug("Error disposing MCP server process: {message}", ex.Message);
+                        }
+                    });
+                }
+
+                EditorPrefs.DeleteKey(ProcessIdKey);
+                _serverStatus.Value = McpServerStatus.Stopped;
+            }
+        }
+
+        /// <summary>
+        /// Returns true when the local MCP server may be auto-started for the given connection mode.
+        /// Only Custom mode targets the local server, so auto-start is allowed there (subject to
+        /// other gates such as <see cref="UnityMcpPluginEditor.KeepServerRunning"/>). Every other
+        /// mode (Cloud today, plus any future addition) connects to a remote endpoint and must
+        /// never auto-start the local server on Editor launch or after a binary update.
+        /// Pure (no Unity API access) so it can be unit-tested in EditMode.
+        /// </summary>
+        public static bool IsAutoStartAllowedForMode(ConnectionMode mode)
+            => mode == ConnectionMode.Custom;
+
+        /// <summary>
+        /// Starts the MCP server if KeepServerRunning is enabled and no external server is detected.
+        /// This method is called during Unity Editor startup to auto-start the server based on user preference.
+        /// The external server check is performed asynchronously to avoid blocking the main thread.
+        /// </summary>
+        public static void StartServerIfNeeded()
+        {
+            EditorApplication.update -= StartServerIfNeeded;
+
+            // Skip local server auto-start in Cloud mode — Unity connects to the cloud server instead
+            if (!IsAutoStartAllowedForMode(UnityMcpPluginEditor.ConnectionMode))
+            {
+                _logger.LogDebug("StartServerIfNeeded: Cloud mode active, skipping local server auto-start");
+                return;
+            }
+
+            // Check if user wants the server to keep running
+            if (!UnityMcpPluginEditor.KeepServerRunning)
+            {
+                _logger.LogDebug("StartServerIfNeeded: KeepServerRunning is false, skipping auto-start");
+                return;
+            }
+
+            // Check if server is already running (either local or detected from previous session)
+            if (_serverStatus.CurrentValue == McpServerStatus.Running ||
+                _serverStatus.CurrentValue == McpServerStatus.Starting)
+            {
+                _logger.LogDebug("StartServerIfNeeded: Server is already running or starting");
+                return;
+            }
+
+            // Check if an external server is available on the port (non-blocking)
+            var port = UnityMcpPluginEditor.Port;
+            CheckExternalServerAsync(port, externalAvailable =>
+            {
+                if (externalAvailable)
+                {
+                    _logger.LogInformation("StartServerIfNeeded: External MCP server detected on port {port}, skipping local server start", port);
+                    return;
+                }
+
+                // Start the local server
+                _logger.LogInformation("StartServerIfNeeded: Starting local MCP server (KeepServerRunning=true)");
+                StartServer();
+            });
+        }
+
+        /// <summary>
+        /// Checks if an external server is listening on the given port on a background thread,
+        /// then invokes the callback on the main thread with the result.
+        /// </summary>
+        static void CheckExternalServerAsync(int port, Action<bool> onResult)
+        {
+            Task.Run(() =>
+            {
+                var result = false;
+                try
+                {
+                    using var client = new System.Net.Sockets.TcpClient();
+                    var connectTask = client.ConnectAsync("localhost", port);
+                    var completed = connectTask.Wait(500); // 500ms timeout
+
+                    if (completed && client.Connected)
+                    {
+                        _logger.LogDebug("CheckExternalServerAsync: Port {port} is in use by another process", port);
+                        result = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogDebug("CheckExternalServerAsync: No server detected on port {port} ({message})", port, ex.Message);
+                }
+                return result;
+            })
+            .ContinueWith(task => onResult(task.Result), TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        #endregion // Process Lifecycle
+    }
+}

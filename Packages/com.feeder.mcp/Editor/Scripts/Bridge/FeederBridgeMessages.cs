@@ -1,0 +1,100 @@
+#nullable enable
+using System;
+
+namespace Feeder.MCP.Editor.Bridge
+{
+    // JSON wire DTOs for FBP/1. These intentionally do not reference the bridge's net10 assembly;
+    // SignalR's JSON protocol matches the public property names on both sides.
+    [Serializable]
+    internal sealed class FbpError
+    {
+        public string Code { get; set; } = string.Empty;
+        public string Message { get; set; } = string.Empty;
+        public bool Retriable { get; set; }
+        public byte[]? DetailsJsonUtf8 { get; set; }
+    }
+
+    [Serializable]
+    internal sealed class UnityRegisterRequest
+    {
+        public string ProtocolVersion { get; set; } = "1";
+        public string ProjectId { get; set; } = string.Empty;
+        public string UnityInstanceId { get; set; } = string.Empty;
+        public string ProjectPathHash { get; set; } = string.Empty;
+        public string UnityVersion { get; set; } = string.Empty;
+        public string PluginVersion { get; set; } = string.Empty;
+        public string[] SupportedProtocolVersions { get; set; } = Array.Empty<string>();
+        public string ToolRegistryHash { get; set; } = string.Empty;
+        public string AuthToken { get; set; } = string.Empty;
+        public FbpEditorState EditorState { get; set; }
+        public string[] PendingOperations { get; set; } = Array.Empty<string>();
+    }
+
+    [Serializable]
+    internal sealed class UnityRegisterResponse
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string ChosenProtocolVersion { get; set; } = string.Empty;
+        public bool RegistryUpToDate { get; set; }
+        public string[] AwaitedOperations { get; set; } = Array.Empty<string>();
+        public int QueueCapacity { get; set; }
+        public int HeartbeatIntervalSeconds { get; set; }
+        public FbpError? Error { get; set; }
+    }
+
+    [Serializable]
+    internal sealed class ToolDescriptor
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Title { get; set; }
+        public string? Description { get; set; }
+        public byte[] InputSchemaJsonUtf8 { get; set; } = Array.Empty<byte>();
+        public bool ReadOnly { get; set; }
+        public bool Destructive { get; set; }
+        public bool Idempotent { get; set; }
+        public bool ThreadSafe { get; set; }
+    }
+
+    [Serializable]
+    internal sealed class RegistrySnapshot
+    {
+        public string ProjectId { get; set; } = string.Empty;
+        public string RegistryHash { get; set; } = string.Empty;
+        public ToolDescriptor[] Tools { get; set; } = Array.Empty<ToolDescriptor>();
+    }
+
+    [Serializable]
+    internal sealed class ToolInvoke
+    {
+        public string OperationId { get; set; } = string.Empty;
+        public string ToolName { get; set; } = string.Empty;
+        public byte[] ArgumentsJsonUtf8 { get; set; } = Array.Empty<byte>();
+        public long DeadlineUnixMs { get; set; }
+        public string? TraceId { get; set; }
+    }
+
+    [Serializable]
+    internal sealed class ToolResult
+    {
+        public string OperationId { get; set; } = string.Empty;
+        public bool Success { get; set; }
+        public byte[]? ContentJsonUtf8 { get; set; }
+        public FbpError? Error { get; set; }
+    }
+
+    [Serializable]
+    internal sealed class HeartbeatMessage
+    {
+        public string UnityInstanceId { get; set; } = string.Empty;
+        public FbpEditorState EditorState { get; set; }
+    }
+
+    internal enum FbpEditorState
+    {
+        Ready,
+        Compiling,
+        Reloading,
+        Playing,
+        Paused,
+    }
+}

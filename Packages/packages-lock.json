@@ -1,5 +1,14 @@
 {
   "dependencies": {
+    "com.feeder.mcp": {
+      "version": "file:com.feeder.mcp",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.modules.uielements": "1.0.0",
+        "com.unity.test-framework": "1.1.33"
+      }
+    },
     "com.unity.burst": {
       "version": "1.8.21",
       "depth": 1,

@@ -1,0 +1,25 @@
+{
+  "name": "com.feeder.mcp",
+  "displayName": "Feeder MCP (Matrix AI Connector)",
+  "version": "0.84.0",
+  "unity": "2022.3",
+  "description": "Standalone Matrix AI Connector package for Unity with a bundled local MCP server.",
+  "documentationUrl": "https://github.com/BingoBoiz/TheMatrix#readme",
+  "changelogUrl": "https://github.com/BingoBoiz/TheMatrix/blob/main/Packages/com.feeder.mcp/CHANGELOG.md",
+  "licensesUrl": "https://github.com/BingoBoiz/TheMatrix/blob/main/Packages/com.feeder.mcp/LICENSE.md",
+  "keywords": [
+    "unity",
+    "mcp",
+    "ai",
+    "editor"
+  ],
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.test-framework": "1.1.33"
+  },
+  "author": {
+    "name": "Feeder",
+    "email": "bingo6xxx@gmail.com",
+    "url": "https://github.com/BingoBoiz"
+  }
+}

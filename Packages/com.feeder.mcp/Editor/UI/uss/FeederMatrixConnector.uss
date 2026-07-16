@@ -1,0 +1,195 @@
+/* ==========================================================================
+   Matrix theme overlay for the AI Connector window.
+   Applied on top of the Feeder MCP package MainWindow.uss, so every selector
+   here re-colors an existing class — layout rules stay in the base sheet.
+   ========================================================================== */
+
+.root-container {
+    background-color: rgba(1, 10, 3, 0.88);
+    color: rgb(140, 235, 160);
+}
+
+.unity-label {
+    color: rgb(140, 235, 160);
+}
+
+.unity-button {
+    color: rgb(140, 235, 160);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────── */
+
+.btn-primary,
+.btn-primary-bold,
+.btn-compact.btn-primary {
+    background-color: rgb(38, 208, 74);
+    color: black;
+}
+
+.btn-primary:hover,
+.btn-primary-bold:hover,
+.btn-compact.btn-primary:hover {
+    background-color: rgb(120, 255, 140);
+}
+
+.btn-primary:active,
+.btn-primary-bold:active,
+.btn-compact.btn-primary:active {
+    background-color: rgb(220, 255, 228);
+}
+
+.btn-secondary,
+.btn-compact {
+    background-color: rgb(4, 34, 13);
+    border-color: rgb(26, 140, 56);
+    color: rgb(140, 235, 160);
+}
+
+.btn-secondary:hover,
+.btn-compact:hover {
+    background-color: rgb(8, 56, 22);
+    border-color: rgb(50, 200, 90);
+}
+
+.btn-secondary:active,
+.btn-compact:active {
+    background-color: rgb(14, 80, 32);
+}
+
+.btn-tertiary {
+    color: rgb(90, 170, 110);
+}
+
+.btn-tertiary:hover {
+    color: rgb(170, 255, 190);
+    background-color: rgba(38, 208, 74, 0.08);
+}
+
+.btn-tertiary:active {
+    color: rgb(220, 255, 228);
+    background-color: rgba(38, 208, 74, 0.16);
+}
+
+/* ── Containers ──────────────────────────────────────────────────────── */
+
+.frame-group {
+    background-color: rgba(0, 60, 20, 0.18);
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.22);
+}
+
+.divider {
+    background-color: rgb(0, 70, 25);
+}
+
+/* ── Connection timeline ─────────────────────────────────────────────── */
+
+.timeline-line {
+    background-color: rgb(0, 110, 40);
+}
+
+.timeline-label {
+    color: rgb(170, 255, 190);
+    border-bottom-color: rgb(170, 255, 190);
+}
+
+.status-indicator-circle-online {
+    background-color: rgb(60, 255, 100);
+}
+
+.status-indicator-circle-connecting {
+    border-color: rgb(60, 255, 100);
+}
+
+.status-indicator-circle-external {
+    border-color: rgb(60, 255, 100);
+}
+
+/* ── Form fields ─────────────────────────────────────────────────────── */
+
+.styled-text-field .unity-text-field__input,
+.styled-integer-field .unity-integer-field__input,
+.styled-dropdown .unity-popup-field__input,
+.styled-dropdown .unity-enum-field__input {
+    background-color: rgba(0, 25, 8, 0.6);
+    border-color: rgba(38, 208, 74, 0.25);
+    color: rgb(170, 255, 190);
+}
+
+.styled-text-field:hover .unity-text-field__input,
+.styled-integer-field:hover .unity-integer-field__input,
+.styled-dropdown:hover .unity-popup-field__input,
+.styled-dropdown:hover .unity-enum-field__input {
+    background-color: rgba(0, 35, 12, 0.7);
+    border-color: rgba(38, 208, 74, 0.5);
+}
+
+.styled-text-field:active .unity-text-field__input,
+.styled-integer-field:active .unity-integer-field__input,
+.styled-dropdown:active .unity-popup-field__input,
+.styled-dropdown:active .unity-enum-field__input {
+    background-color: rgba(0, 45, 16, 0.8);
+    border-color: rgba(38, 208, 74, 0.7);
+}
+
+.styled-dropdown .unity-base-popup-field__text {
+    color: rgb(170, 255, 190);
+}
+
+.token-input > .unity-base-field__input {
+    color: rgb(140, 235, 160);
+}
+
+.token-input.token-placeholder > .unity-base-field__input {
+    color: rgb(90, 170, 110);
+}
+
+/* ── Segmented control (transport / auth toggles) ────────────────────── */
+
+.segmented-control__track {
+    background-color: rgba(38, 208, 74, 0.08);
+}
+
+.segmented-control__highlight {
+    background-color: rgba(0, 0, 0, 0.55);
+}
+
+.segmented-control__segment {
+    color: rgb(90, 170, 110);
+}
+
+.segmented-control__segment:hover {
+    color: rgb(170, 255, 190);
+}
+
+.segmented-control__segment--selected {
+    color: rgb(120, 255, 140);
+}
+
+.segmented-control__segment--selected:hover {
+    color: rgb(190, 255, 205);
+}
+
+/* ── Toggle switches ─────────────────────────────────────────────────── */
+
+.item-switch .unity-toggle__input {
+    background-color: rgb(28, 58, 36);
+}
+
+.item-switch .unity-toggle__checkmark {
+    background-color: rgb(234, 255, 240);
+}
+
+.item-switch.checked .unity-toggle__input {
+    background-color: rgb(43, 213, 74);
+}
+
+/* ── Scrollbars ──────────────────────────────────────────────────────── */
+
+.unity-scroller .unity-base-slider__dragger {
+    background-color: rgba(38, 208, 74, 0.35);
+}
+
+.unity-scroller .unity-base-slider__dragger:hover {
+    background-color: rgba(38, 208, 74, 0.6);
+}
