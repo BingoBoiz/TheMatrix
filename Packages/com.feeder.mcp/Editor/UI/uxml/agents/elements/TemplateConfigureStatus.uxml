@@ -12,6 +12,7 @@
                     <ui:Button name="btnConfigure" text="Configure" class="btn-compact" />
                 </ui:VisualElement>
             </ui:VisualElement>
+            <ui:Toggle name="toggleAutoConfigure" label="Auto-configure on Unity load" class="section-desc" style="margin-top: 2px;" />
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

@@ -42,7 +42,12 @@ The Git tag and the `version` in `Packages/com.feeder.mcp/package.json` must mat
 
 ## Use
 
-After Unity finishes compiling, open **Tools > Feeder > Matrix AI Connector**.
+Open the project once after installing — the package auto-starts the local MCP server, writes
+the project-root `.mcp.json` for Claude Code, and generates `.claude/skills`. No manual setup
+is needed for Claude Code.
+
+For other AI clients or to opt out of auto-configure, open
+**Tools > Feeder > Matrix AI Connector**.
 
 ## Repository layout
 

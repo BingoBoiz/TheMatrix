@@ -28,14 +28,21 @@ namespace Feeder.MCP.Editor
             API.Tool_Tests.Init();
             PackageUtils.Init();
 
-            // Auto-generate skill files for the selected agent if enabled
+            // Auto-generate skill files for the selected agent if enabled. selectedAiAgentId is
+            // PlayerPrefs-backed and empty until the connector window is opened, so fall back to
+            // Claude Code (same default the window uses) for the zero-setup install path.
             var savedAgentId = MainWindowEditor.selectedAiAgentId.Value;
+            if (string.IsNullOrEmpty(savedAgentId))
+                savedAgentId = "claude-code";
             var agent = AiAgentConfiguratorRegistry.GetByAgentId(savedAgentId);
             if (agent?.SupportsSkills == true && UnityMcpPluginEditor.IsAutoGenerateSkills(agent.AgentId))
             {
                 UnityMcpPluginEditor.SkillsPath = agent.SkillsPath!;
                 UnityMcpPluginEditor.Instance.McpPluginInstance!.GenerateSkillFiles(UnityMcpPluginEditor.ProjectRootPath);
             }
+
+            // Write MCP config files for auto-configure-enabled agents (once per session).
+            EditorApplication.delayCall += AutoConfigureAgents;
         }
     }
 }

@@ -46,6 +46,7 @@ try
     });
 
     builder.Services.AddSingleton<UnityLinkRegistry>();
+    builder.Services.AddSingleton<McpClientTracker>();
     builder.Services.AddSingleton<MockUnityBackend>();
     builder.Services.AddSingleton<UnityLinkBackend>();
     builder.Services.AddSingleton<IUnityBackend, BackendRouter>();
@@ -59,7 +60,14 @@ try
         {
             options.ServerInfo = new Implementation { Name = "feeder-mcp-server", Version = BridgeVersion.Value };
         })
-        .WithHttpTransport()
+        .WithHttpTransport(options =>
+        {
+            // Wrap each MCP session so connected AI clients are mirrored to Unity (FBP McpClientsChanged).
+#pragma warning disable MCPEXP002 // RunSessionHandler is experimental in the MCP SDK; revisit on SDK upgrades.
+            options.RunSessionHandler = (context, server, ct) =>
+                context.RequestServices.GetRequiredService<McpClientTracker>().RunSessionAsync(server, ct);
+#pragma warning restore MCPEXP002
+        })
         .WithListToolsHandler(async (context, ct) =>
         {
             var backend = context.Services!.GetRequiredService<IUnityBackend>();
@@ -107,10 +115,11 @@ try
     app.MapHub<FbpHub>(FbpConstants.HubPath, o => o.Transports = HttpTransportType.WebSockets);
 
     // Local health endpoint — intentionally outside the MCP surface.
-    app.MapGet("/healthz", (UnityLinkRegistry registry) => Results.Json(new
+    app.MapGet("/healthz", (UnityLinkRegistry registry, McpClientTracker mcpClients) => Results.Json(new
     {
         status = "ok",
         version = BridgeVersion.Value,
+        mcpClients = mcpClients.Snapshot().Select(c => new { c.SessionId, c.ClientName, c.ClientVersion }),
         unityLinks = registry.Links.Select(l => new
         {
             l.ProjectId,
@@ -146,7 +155,7 @@ static ReadResourceResult throwResourceNotFound(string? uri)
 
 public static class BridgeVersion
 {
-    public const string Value = "0.2.0";
+    public const string Value = "0.2.1";
 }
 
 // Exposes the entry point to WebApplicationFactory-based integration tests.

@@ -114,7 +114,7 @@ namespace Feeder.MCP.Editor
         /// the two to decide whether the cached binary in <c>Library/mcp-server</c> is current. Bumping
         /// the server means replacing the whole <c>Server~/&lt;rid&gt;</c> payload AND this constant together.
         /// </summary>
-        public const string ServerVersion = "0.2.0";
+        public const string ServerVersion = "0.2.1";
 
         public const string ExecutableName = "gamedev-mcp-server";
         public const string BundledServerArchiveName = "server-payload.zip";

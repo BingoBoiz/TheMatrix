@@ -83,6 +83,16 @@ namespace Feeder.MCP.Editor.Bridge
     }
 
     [Serializable]
+    internal sealed class McpClientInfo
+    {
+        public string SessionId { get; set; } = string.Empty;
+        public string ClientName { get; set; } = string.Empty;
+        public string ClientTitle { get; set; } = string.Empty;
+        public string ClientVersion { get; set; } = string.Empty;
+        public bool IsConnected { get; set; }
+    }
+
+    [Serializable]
     internal sealed class HeartbeatMessage
     {
         public string UnityInstanceId { get; set; } = string.Empty;

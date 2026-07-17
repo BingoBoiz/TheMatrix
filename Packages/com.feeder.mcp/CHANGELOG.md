@@ -2,6 +2,19 @@
 
 All notable changes to this package are documented here.
 
+## [0.85.0] - 2026-07-17
+
+- Added zero-setup auto-configure: on editor load the package writes the MCP config file for
+  enabled agents (default: Claude Code's project-root `.mcp.json`) and generates skill files,
+  so a freshly installed package works without opening the connector window.
+- Auto-configure self-heals stale ports when the project is cloned or moved to a new path
+  (the server port derives from the project directory).
+- Added a per-agent "Auto-configure on Unity load" toggle to the connector's MCP status row;
+  skill auto-generation now defaults to enabled for Claude Code.
+- Auto-configure is skipped in batch mode, CI, and Cloud connection mode, and never blocks
+  editor load on failure.
+- Removed the external download/tutorial links from the agent configurator UI.
+
 ## [0.84.0] - 2026-07-16
 
 - Replaced the bundled third-party GameDev MCP server with the Feeder MCP Server 0.2.0.

@@ -9,11 +9,13 @@ public interface IFbpUnityClient
 {
     Task InvokeTool(ToolInvoke invoke);
     Task CancelTool(string operationId);
+    Task McpClientsChanged(McpClientInfo[] clients);
 }
 
 /// <summary>FBP/1 hub — the Unity side of the bridge. WebSocket + MessagePack only.</summary>
 public sealed class FbpHub(
     UnityLinkRegistry registry,
+    McpClientTracker mcpClients,
     IOptions<BridgeOptions> options,
     ILogger<FbpHub> logger) : Hub<IFbpUnityClient>
 {
@@ -53,6 +55,10 @@ public sealed class FbpHub(
         logger.LogInformation(
             "Unity registered: project {ProjectId}, instance {InstanceId}, editor {EditorState}, plugin {PluginVersion}, unity {UnityVersion}",
             request.ProjectId, request.UnityInstanceId, request.EditorState, request.PluginVersion, request.UnityVersion);
+
+        // Seed the freshly-linked editor with the current MCP client set so its "AI agent"
+        // indicator is correct immediately after a domain reload, not only on the next change.
+        _ = Clients.Caller.McpClientsChanged(mcpClients.Snapshot());
 
         return new UnityRegisterResponse
         {

@@ -175,6 +175,7 @@ namespace Feeder.MCP.Editor.Bridge
                 if (_operations.TryGetValue(operationId, out var cts))
                     cts.Cancel();
             });
+            connection.On<McpClientInfo[]>("McpClientsChanged", clients => PublishMcpClients(clients));
             connection.Reconnecting += _ =>
             {
                 _owner.SetBridgeConnectionState(HubConnectionState.Reconnecting);
@@ -195,6 +196,7 @@ namespace Feeder.MCP.Editor.Bridge
             connection.Closed += _ =>
             {
                 _owner.SetBridgeConnectionState(HubConnectionState.Disconnected);
+                PublishMcpClients(Array.Empty<McpClientInfo>());
                 return Task.CompletedTask;
             };
             return connection;
@@ -400,6 +402,63 @@ namespace Feeder.MCP.Editor.Bridge
                 else linked.CancelAfter(remaining);
             }
             return linked;
+        }
+
+        McpClientData[] _lastMcpClients = Array.Empty<McpClientData>();
+
+        /// <summary>
+        /// Forwards the bridge's MCP client set into <c>McpManager</c> so the plugin's client
+        /// observables (and the "AI agent" indicator in the connector window) reflect reality.
+        /// </summary>
+        void PublishMcpClients(McpClientInfo[]? clients)
+        {
+            try
+            {
+                var manager = _owner.McpPluginInstance?.McpManager as McpManager;
+                if (manager == null)
+                    return;
+
+                var current = (clients ?? Array.Empty<McpClientInfo>())
+                    .Select(client => new McpClientData
+                    {
+                        SessionId = client.SessionId,
+                        ClientName = string.IsNullOrEmpty(client.ClientName) ? "MCP client" : client.ClientName,
+                        ClientTitle = client.ClientTitle,
+                        ClientVersion = client.ClientVersion,
+                        IsConnected = client.IsConnected,
+                    })
+                    .ToArray();
+
+                var previous = Interlocked.Exchange(ref _lastMcpClients, current);
+                var added = current.Where(c => previous.All(p => p.SessionId != c.SessionId)).ToArray();
+                var removed = previous.Where(p => current.All(c => c.SessionId != p.SessionId)).ToArray();
+
+                _ = ForwardAsync();
+
+                async Task ForwardAsync()
+                {
+                    try
+                    {
+                        if (added.Length == 0 && removed.Length == 0)
+                        {
+                            await manager.OnInitialClientData(current);
+                            return;
+                        }
+                        foreach (var client in added)
+                            await manager.OnMcpClientConnected(client, current);
+                        foreach (var client in removed)
+                            await manager.OnMcpClientDisconnected(client, current);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogWarning(e, "Failed to publish MCP client change to McpManager");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogWarning(e, "Failed to process MCP client change from Feeder Local Bridge");
+            }
         }
 
         void RemoveOperation(string operationId)

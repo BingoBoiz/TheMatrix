@@ -125,87 +125,41 @@ namespace Feeder.MCP.Editor.UI
 
         private void FetchAiAgentData(int retryCount = 3, int retryDelayMs = 3000)
         {
-            var mcpPluginInstance = UnityMcpPluginEditor.Instance.McpPluginInstance;
-            if (mcpPluginInstance == null)
+            // The Feeder Local Bridge pushes MCP client changes into McpManager over FBP
+            // (see FeederBridgeAdapter.PublishMcpClients), so the authoritative client set is the
+            // local ActiveClients list — no RPC round-trip needed.
+            var manager = UnityMcpPluginEditor.Instance.McpPluginInstance?.McpManager;
+            if (manager == null)
             {
-                Logger.LogDebug("Cannot fetch AI agent data: McpPluginInstance is null");
+                Logger.LogDebug("Cannot fetch AI agent data: McpManager is null");
                 return;
             }
 
-            var mcpManagerHub = mcpPluginInstance.McpManagerHub;
-            if (mcpManagerHub == null)
+            var connectedAgents = manager.ActiveClients.Where(c => c.IsConnected).ToList();
+            var isConnected = connectedAgents.Count > 0;
+            SetAiAgentStatus(isConnected, isConnected
+                ? connectedAgents.Select(a => $"AI agent: {a.ClientName} ({a.ClientVersion})")
+                : null);
+
+            // If AI agent is not connected but Unity is, retry after delay.
+            // The AI agent may need time to re-establish its session after Unity reconnects.
+            if (!isConnected && retryCount > 0 && UnityMcpPluginEditor.IsConnected.CurrentValue)
             {
-                Logger.LogDebug("Cannot fetch AI agent data: McpManagerHub is null");
-                return;
+                Logger.LogDebug("AI agent not connected yet, scheduling retry ({retriesLeft} left)", retryCount);
+                Observable.Timer(TimeSpan.FromMilliseconds(retryDelayMs))
+                    .ObserveOnCurrentSynchronizationContext()
+                    .Subscribe(_ => FetchAiAgentData(retryCount - 1, retryDelayMs))
+                    .AddTo(_disposables);
             }
-
-            var task = mcpManagerHub.GetMcpClientData();
-            if (task == null)
-            {
-                Logger.LogDebug("Cannot fetch AI agent data: GetMcpClientData returned null");
-                return;
-            }
-
-            // Claim a unique version for this fetch so the async result can detect if a newer
-            // update (e.g. from OnClientsChanged or another FetchAiAgentData call) has superseded it.
-            var fetchVersion = Interlocked.Increment(ref _aiAgentDataVersion);
-
-            task.ContinueWith(t =>
-            {
-                if (Interlocked.Read(ref _aiAgentDataVersion) != fetchVersion)
-                {
-                    Logger.LogTrace("Skipping AI agent data update because a newer update was applied at {time}",
-                        DateTime.UtcNow);
-                    return;
-                }
-                MainThread.Instance.Run(() =>
-                {
-                    // Second check: close the TOCTOU window between the thread-pool check above
-                    // and the main-thread callback execution.
-                    if (Interlocked.Read(ref _aiAgentDataVersion) != fetchVersion)
-                        return;
-                    if (t.IsCompletedSuccessfully)
-                    {
-                        var clients = t.Result;
-                        var connectedAgents = clients.Where(c => c.IsConnected).ToList();
-                        var isConnected = connectedAgents.Count > 0;
-                        SetAiAgentStatus(isConnected, isConnected
-                            ? connectedAgents.Select(a => $"AI agent: {a.ClientName} ({a.ClientVersion})")
-                            : null);
-
-                        // If AI agent is not connected but Unity is, retry after delay.
-                        // The AI agent may need time to re-establish its session after Unity reconnects.
-                        if (!isConnected && retryCount > 0 && UnityMcpPluginEditor.IsConnected.CurrentValue)
-                        {
-                            Logger.LogDebug("AI agent not connected yet, scheduling retry ({retriesLeft} left)", retryCount);
-                            Observable.Timer(TimeSpan.FromMilliseconds(retryDelayMs))
-                                .ObserveOnCurrentSynchronizationContext()
-                                .Subscribe(_ => FetchAiAgentData(retryCount - 1, retryDelayMs))
-                                .AddTo(_disposables);
-                        }
-                    }
-                    else if (t.IsFaulted)
-                    {
-                        Logger.LogDebug("Failed to fetch AI agent data: {error}", t.Exception?.Message ?? "Unknown error");
-                        SetAiAgentStatus(false);
-                    }
-                    else
-                    {
-                        SetAiAgentStatus(false, new[] { "AI agent: Not found" });
-                    }
-                });
-            });
         }
 
         private void SetupToolsSection(VisualElement root)
         {
             var btn = root.Q<Button>("btnOpenTools");
-            var label = root.Q<Label>("toolsCountLabel");
-            var tokenLabel = root.Q<Label>("toolsTokenCountLabel");
 
             btn.RegisterCallback<ClickEvent>(evt => McpToolsWindow.ShowWindow());
 
-            SubscribeToFeatureStats(label, "tools", Tooltip_ToolsCountLabel,
+            SubscribeToFeatureStats(btn, "Tools", Tooltip_ToolsCountLabel,
                 computeStats: () =>
                 {
                     var manager = UnityMcpPluginEditor.PluginProperty.CurrentValue?.McpManager.ToolManager;
@@ -216,18 +170,16 @@ namespace Feeder.MCP.Editor.UI
                     var totalTokens = all.Where(t => manager.IsToolEnabled(t.Name)).Sum(t => t.TokenCount);
                     return (totalCount, enabledCount, totalTokens);
                 },
-                getOnUpdated: plugin => plugin.McpManager.ToolManager?.OnToolsUpdated,
-                tokenLabel: tokenLabel);
+                getOnUpdated: plugin => plugin.McpManager.ToolManager?.OnToolsUpdated);
         }
 
         private void SetupPromptsSection(VisualElement root)
         {
             var btn = root.Q<Button>("btnOpenPrompts");
-            var label = root.Q<Label>("promptsCountLabel");
 
             btn.RegisterCallback<ClickEvent>(evt => McpPromptsWindow.ShowWindow());
 
-            SubscribeToFeatureStats(label, "prompts", Tooltip_PromptsCountLabel,
+            SubscribeToFeatureStats(btn, "Prompts", Tooltip_PromptsCountLabel,
                 computeStats: () =>
                 {
                     var manager = UnityMcpPluginEditor.PluginProperty.CurrentValue?.McpManager.PromptManager;
@@ -243,11 +195,10 @@ namespace Feeder.MCP.Editor.UI
         private void SetupResourcesSection(VisualElement root)
         {
             var btn = root.Q<Button>("btnOpenResources");
-            var label = root.Q<Label>("resourcesCountLabel");
 
             btn.RegisterCallback<ClickEvent>(evt => McpResourcesWindow.ShowWindow());
 
-            SubscribeToFeatureStats(label, "resources", Tooltip_ResourcesCountLabel,
+            SubscribeToFeatureStats(btn, "Resources", Tooltip_ResourcesCountLabel,
                 computeStats: () =>
                 {
                     var manager = UnityMcpPluginEditor.PluginProperty.CurrentValue?.McpManager.ResourceManager;

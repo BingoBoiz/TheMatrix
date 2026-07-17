@@ -1,13 +1,9 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <ui:ScrollView>
-        <ui:VisualElement class="container" style="min-width: 320px;">
+        <ui:VisualElement class="container">
             <!-- Header Section -->
-            <ui:Box name="contHeader" style="background-color: rgba(222, 222, 222, 0); flex-direction: row; flex-shrink: 0;">
-                <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0);">
-                    <ui:DropdownField label="Log Level" name="dropdownLogLevel" class="content-item styled-dropdown" />
-                    <ui:IntegerField label="Timeout (ms)" name="inputTimeoutMs" value="10000" class="content-item" />
-                    <ui:TextField picking-mode="Ignore" label="Version" value="0.0.0" readonly="true" name="currentVersion" focusable="false" class="content-item transparent-text-field" />
-                </ui:VisualElement>
+            <ui:Box name="contHeader" style="background-color: rgba(222, 222, 222, 0); flex-direction: row; flex-shrink: 0; align-items: center;">
+                <ui:Label text="AI Connector" class="header" style="flex-grow: 1;" />
                 <ui:VisualElement name="imgLogoPivot" class="animated-selectable" style="flex-grow: 0; height: 60px; width: 60px; right: 0; margin-left: 15px; flex-shrink: 0; margin-right: 0px; margin-top: 2px; flex-direction: row;">
                     <ui:VisualElement name="imgLogo" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); background-image: url(&quot;project://database/Packages/com.feeder.mcp/Editor/Gizmos/logo_512.png&quot;); -unity-background-scale-mode: stretch-to-fill; align-self: stretch;" />
                 </ui:VisualElement>
@@ -21,7 +17,7 @@
             <ui:TextField picking-mode="Ignore" label="Server URL" value="http://localhost:8080" name="InputServerURL" class="content-item styled-text-field" />
             <!-- Cloud Authorization (visible in Cloud mode only) -->
             <ui:VisualElement name="cloudAuthSection" style="flex-direction: column; margin-bottom: 8px; display: none;">
-                <ui:VisualElement style="flex-direction: row; margin-top: 2px; align-items: center;">
+                <ui:VisualElement style="flex-direction: row; flex-wrap: wrap; margin-top: 2px; align-items: center;">
                     <ui:TextField name="inputCloudToken" label="" placeholder-text="Cloud Token" readonly="true" password="true" style="flex-grow: 1;" class="token-input" />
                     <ui:Button name="btnCloudRevoke" text="Revoke" tooltip="Logout from the Cloud server. Clears the stored authentication token and disconnects Unity from the cloud." class="btn-compact btn-alert" style="display: none;" />
                     <ui:Button name="btnCloudAuthorize" text="Authorize" tooltip="Authenticate with the Cloud server using device code flow. Opens a browser to complete authorization." class="btn-compact" />
@@ -60,23 +56,6 @@
                             <ui:Label name="mcpServerErrorLabel" text="" class="section-desc" style="display: none; white-space: normal; color: rgb(220, 120, 120);" />
                             <ui:Button name="btnDownloadRetryServer" text="Install / Retry server" class="btn-secondary" style="display: none;" />
                         </ui:VisualElement>
-                        <!-- Row 2: Transport -->
-                        <ui:VisualElement style="flex-direction: row; align-items: center; justify-content: space-between; margin-top: 2px; margin-bottom: 2px;">
-                            <ui:Label name="labelTransport" text="Transport" class="section-desc" style="margin-bottom: 0;" />
-                            <ui:VisualElement name="segmentTransport" />
-                        </ui:VisualElement>
-                        <!-- Row 3: Authorization -->
-                        <ui:VisualElement style="flex-direction: row; align-items: center; justify-content: space-between; margin-top: 2px; margin-bottom: 2px;">
-                            <ui:Label name="labelAuthorizationToken" text="Authorization Token" class="section-desc" style="margin-bottom: 0;" />
-                            <ui:VisualElement name="segmentAuthorization" />
-                        </ui:VisualElement>
-                        <!-- Row 4: Authorization Token -->
-                        <ui:VisualElement name="tokenSection" style="flex-direction: column; margin-top: 2px; margin-bottom: 2px;">
-                            <ui:VisualElement style="flex-direction: row;">
-                                <ui:TextField name="inputAuthorizationToken" label="" placeholder-text="Token" readonly="true" password="true" class="token-input" />
-                                <ui:Button name="btnGenerateToken" text="New" class="btn-compact" />
-                            </ui:VisualElement>
-                        </ui:VisualElement>
                     </ui:VisualElement>
                 </ui:VisualElement>
                 <!-- Point 3: AI Agent -->
@@ -98,32 +77,35 @@
             <ui:VisualElement name="ConfigureAgentsContainer" />
             <ui:VisualElement class="divider" />
             <!-- MCP features section ============================== -->
-            <!-- Tools Configuration Section -->
-            <ui:VisualElement name="ToolsConfigurationSection">
-                <ui:VisualElement class="row-top">
-                    <ui:VisualElement style="flex-direction: column;">
-                        <ui:Label name="toolsCountLabel" text="0 / 0 tools" class="header" />
-                        <ui:Label name="toolsTokenCountLabel" text="~0 tokens total" tooltip="Total tokens consumed by active tools in the AI context. Fewer tokens means more free context for AI to reason, leading to better and more accurate responses. Disable unused tools to reduce token usage." style="font-size: 11px; color: rgb(150, 150, 150); margin-top: 2px;" />
+            <ui:VisualElement name="mcpFeaturesRow" class="mcp-features-row">
+                <ui:Button name="btnOpenTools" text="Tools" class="btn-secondary feature-btn" />
+                <ui:Button name="btnOpenPrompts" text="Prompts" class="btn-secondary feature-btn" />
+                <ui:Button name="btnOpenResources" text="Resources" class="btn-secondary feature-btn" />
+            </ui:VisualElement>
+            <ui:VisualElement class="divider" />
+            <!-- Advanced section ============================== -->
+            <ui:Foldout name="advancedFoldout" text="Advanced" value="false" class="title-foldout">
+                <ui:DropdownField label="Log Level" name="dropdownLogLevel" class="content-item styled-dropdown" />
+                <ui:IntegerField label="Timeout (ms)" name="inputTimeoutMs" value="10000" class="content-item" />
+                <ui:TextField picking-mode="Ignore" label="Version" value="0.0.0" readonly="true" name="currentVersion" focusable="false" class="content-item transparent-text-field" />
+                <!-- Transport -->
+                <ui:VisualElement style="flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 2px; margin-bottom: 2px;">
+                    <ui:Label name="labelTransport" text="Transport" class="section-desc" style="margin-bottom: 0;" />
+                    <ui:VisualElement name="segmentTransport" />
+                </ui:VisualElement>
+                <!-- Authorization -->
+                <ui:VisualElement style="flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; margin-top: 2px; margin-bottom: 2px;">
+                    <ui:Label name="labelAuthorizationToken" text="Authorization Token" class="section-desc" style="margin-bottom: 0;" />
+                    <ui:VisualElement name="segmentAuthorization" />
+                </ui:VisualElement>
+                <!-- Authorization Token -->
+                <ui:VisualElement name="tokenSection" style="flex-direction: column; margin-top: 2px; margin-bottom: 2px;">
+                    <ui:VisualElement style="flex-direction: row;">
+                        <ui:TextField name="inputAuthorizationToken" label="" placeholder-text="Token" readonly="true" password="true" class="token-input" />
+                        <ui:Button name="btnGenerateToken" text="New" class="btn-compact" />
                     </ui:VisualElement>
-                    <ui:Button name="btnOpenTools" text="Open" class="btn-secondary" />
                 </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:VisualElement class="divider" />
-            <!-- Prompts Configuration Section -->
-            <ui:VisualElement name="PromptsConfigurationSection">
-                <ui:VisualElement class="row-top">
-                    <ui:Label name="promptsCountLabel" text="0 / 0 prompts" class="header" />
-                    <ui:Button name="btnOpenPrompts" text="Open" class="btn-secondary" />
-                </ui:VisualElement>
-            </ui:VisualElement>
-            <ui:VisualElement class="divider" />
-            <!-- Resources Configuration Section -->
-            <ui:VisualElement name="ResourcesConfigurationSection">
-                <ui:VisualElement class="row-top">
-                    <ui:Label name="resourcesCountLabel" text="0 / 0 resources" class="header" />
-                    <ui:Button name="btnOpenResources" text="Open" class="btn-secondary" />
-                </ui:VisualElement>
-            </ui:VisualElement>
+            </ui:Foldout>
         </ui:VisualElement>
     </ui:ScrollView>
 </ui:UXML>

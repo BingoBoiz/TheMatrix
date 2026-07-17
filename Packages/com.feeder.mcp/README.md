@@ -20,15 +20,25 @@ official Unity Test Framework dependency from its standard registry.
 For reproducible installs, use a released tag:
 
 ```text
-https://github.com/BingoBoiz/TheMatrix.git?path=/Packages/com.feeder.mcp#v0.84.0
+https://github.com/BingoBoiz/TheMatrix.git?path=/Packages/com.feeder.mcp#v0.85.0
 ```
 
 ## Getting started
 
-1. Open **Tools > Feeder > Matrix AI Connector**.
-2. Select the AI client you want to configure.
-3. Start the local MCP server.
-4. Apply or copy the generated client configuration.
+Install the package and open the project once — that's it for Claude Code. On editor load the
+package automatically:
+
+1. Extracts and starts the bundled local MCP server.
+2. Writes the project-root `.mcp.json` with the correct server URL (Claude Code picks it up on
+   the next session in that folder).
+3. Generates skill files into `.claude/skills`.
+
+For other AI clients, or to opt out, open **Tools > Feeder > Matrix AI Connector**, select the
+client, and use the **Configure** button or the **Auto-configure on Unity load** toggle.
+
+Note: the server port is derived from the project's directory path, so `.mcp.json` differs
+between machines that clone the project to different paths. This is expected — the file is
+rewritten with the correct port on editor load, so it is safe to commit or gitignore it.
 
 ## Platform support
 

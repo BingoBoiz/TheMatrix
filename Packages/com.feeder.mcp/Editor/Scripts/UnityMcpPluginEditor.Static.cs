@@ -197,6 +197,31 @@ namespace Feeder.MCP
             NotifyChanged(Instance.unityConnectionConfig);
         }
 
+        public static bool IsAutoConfigureAgent(string agentId)
+        {
+            var dict = Instance.unityConnectionConfig.AgentAutoConfigure;
+            return dict.TryGetValue(agentId, out var enabled) && enabled;
+        }
+
+        /// <summary>Agent ids whose MCP config should be written automatically on editor load.</summary>
+        public static System.Collections.Generic.List<string> AutoConfigureAgentIds
+        {
+            get
+            {
+                var result = new System.Collections.Generic.List<string>();
+                foreach (var entry in Instance.unityConnectionConfig.AgentAutoConfigure)
+                    if (entry.Value)
+                        result.Add(entry.Key);
+                return result;
+            }
+        }
+
+        public static void SetAutoConfigureAgent(string agentId, bool enabled)
+        {
+            Instance.unityConnectionConfig.AgentAutoConfigure[agentId] = enabled;
+            NotifyChanged(Instance.unityConnectionConfig);
+        }
+
         public static string SkillsPath
         {
             get => Instance.unityConnectionConfig.SkillsPath;

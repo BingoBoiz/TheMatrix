@@ -151,7 +151,6 @@ namespace Feeder.MCP.Editor.UI
 
             SetAgentName(_configurator.AgentName);
             SetAgentIcon();
-            SetupHeaderLinks();
             BuildTransportSections();
             SetupSkillsUI();
             SetupAlertPanel();
@@ -183,69 +182,6 @@ namespace Feeder.MCP.Editor.UI
 
             agentIcon.style.backgroundImage = icon == null ? null : new StyleBackground(icon);
             agentIcon.style.display = icon == null ? DisplayStyle.None : DisplayStyle.Flex;
-        }
-
-        /// <summary>
-        /// Renders the header open-URL links from the shared DTO's <see cref="AgentConfig.AgentConfiguratorDescription.Links"/>
-        /// onto the existing download / tutorial label slots. Each link is a
-        /// <see cref="AgentConfig.ConfigurationItemKind.Link"/> carrying a display label + URL — this is the
-        /// Link-element rendering added for DTO parity. When the configurator emits no links
-        /// (e.g. the Custom agent) the whole links row is hidden, mirroring the old
-        /// <c>DisableLinksContainer()</c> behaviour.
-        /// </summary>
-        private void SetupHeaderLinks()
-        {
-            var linksContainer = Root!.Q<VisualElement>("linksContainer");
-            var downloadLink = Root!.Q<Label>("downloadLink");
-            var tutorialSeparator = Root!.Q<Label>("tutorialSeparator");
-            var tutorialLink = Root!.Q<Label>("tutorialLink");
-
-            // Describe() carries the engine-agnostic link list; transport choice does not affect links.
-            var links = _configurator.BuildLinks();
-
-            if (links.Count == 0)
-            {
-                if (linksContainer != null)
-                    linksContainer.style.display = DisplayStyle.None;
-                return;
-            }
-
-            // Link[0] → download slot, Link[1] → tutorial slot (mirrors the original two-link header).
-            var download = links.Count > 0 ? links[0] : null;
-            var tutorial = links.Count > 1 ? links[1] : null;
-
-            if (downloadLink != null)
-            {
-                if (download != null && !string.IsNullOrEmpty(download.Url))
-                {
-                    downloadLink.text = download.Text;
-                    downloadLink.style.display = DisplayStyle.Flex;
-                    var url = download.Url!;
-                    downloadLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(url));
-                }
-                else
-                {
-                    downloadLink.style.display = DisplayStyle.None;
-                }
-            }
-
-            if (tutorial != null && !string.IsNullOrEmpty(tutorial.Url))
-            {
-                if (tutorialLink != null)
-                {
-                    tutorialLink.text = tutorial.Text;
-                    tutorialLink.style.display = DisplayStyle.Flex;
-                    var url = tutorial.Url!;
-                    tutorialLink.RegisterCallback<ClickEvent>(_ => Application.OpenURL(url));
-                }
-                if (tutorialSeparator != null)
-                    tutorialSeparator.style.display = DisplayStyle.Flex;
-            }
-            else
-            {
-                if (tutorialLink != null) tutorialLink.style.display = DisplayStyle.None;
-                if (tutorialSeparator != null) tutorialSeparator.style.display = DisplayStyle.None;
-            }
         }
 
         /// <summary>
@@ -335,7 +271,9 @@ namespace Feeder.MCP.Editor.UI
                 case AgentConfig.ConfigurationItemKind.EditableField:
                     return BuildEditableField(item.Text);
                 case AgentConfig.ConfigurationItemKind.Link:
-                    return BuildLinkElement(item);
+                    // External links (download / tutorial URLs from the shared DTO) are
+                    // intentionally not rendered in this fork.
+                    return null;
                 default:
                     return TemplateLabelDescription(item.Text);
             }
@@ -366,23 +304,6 @@ namespace Feeder.MCP.Editor.UI
                     field.SetValueWithoutNotify(normalized);
             });
             return field;
-        }
-
-        /// <summary>
-        /// A clickable open-URL link rendered inside a section (the DTO Link kind). Reuses the
-        /// same link-label styling as the header links.
-        /// </summary>
-        private VisualElement BuildLinkElement(AgentConfig.ConfigurationItem item)
-        {
-            var label = new Label(item.Text);
-            label.AddToClassList("section-desc");
-            label.AddToClassList("link-label");
-            if (!string.IsNullOrEmpty(item.Url))
-            {
-                var url = item.Url!;
-                label.RegisterCallback<ClickEvent>(_ => Application.OpenURL(url));
-            }
-            return label;
         }
 
         #endregion
@@ -420,6 +341,17 @@ namespace Feeder.MCP.Editor.UI
                 freshConfig.Unconfigure();
                 RefreshConfigurationUI();
             });
+
+            var toggleAutoConfigure = root.Q<Toggle>("toggleAutoConfigure");
+            if (toggleAutoConfigure != null)
+            {
+                toggleAutoConfigure.SetValueWithoutNotify(UnityMcpPluginEditor.IsAutoConfigureAgent(AgentId));
+                toggleAutoConfigure.RegisterValueChangedCallback(evt =>
+                {
+                    UnityMcpPluginEditor.SetAutoConfigureAgent(AgentId, evt.newValue);
+                    UnityMcpPluginEditor.Instance.Save();
+                });
+            }
 
             return root;
         }

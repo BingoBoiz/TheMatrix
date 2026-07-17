@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "Feeder-MCP": {
+      "type": "http",
+      "url": "http://localhost:25213/mcp"
+    }
+  }
+}

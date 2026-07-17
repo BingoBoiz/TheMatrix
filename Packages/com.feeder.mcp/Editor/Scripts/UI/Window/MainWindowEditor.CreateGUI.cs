@@ -365,13 +365,12 @@ namespace Feeder.MCP.Editor.UI
 
         /// <summary>
         /// Subscribes to a feature manager's stats (tools/prompts/resources) and updates
-        /// the label with enabled/total counts and tooltip.
+        /// the element's text with enabled/total counts and tooltip.
         /// </summary>
         private void SubscribeToFeatureStats(
-            Label label, string featureName, string tooltip,
+            TextElement label, string featureName, string tooltip,
             Func<(int total, int enabled, int totalTokens)> computeStats,
-            Func<IMcpPlugin, Observable<Unit>?> getOnUpdated,
-            Label? tokenLabel = null)
+            Func<IMcpPlugin, Observable<Unit>?> getOnUpdated)
         {
             UnityMcpPluginEditor.PluginProperty
                 .WhereNotNull()
@@ -381,13 +380,10 @@ namespace Feeder.MCP.Editor.UI
                 {
                     var (total, enabled, totalTokens) = computeStats();
                     var disabled = total - enabled;
-                    label.text = $"{enabled} / {total} {featureName}";
+                    label.text = $"{featureName} ({enabled}/{total})";
                     label.tooltip = $"{tooltip}\n\n{enabled} enabled / {disabled} disabled / {total} total";
-
-                    if (tokenLabel != null && totalTokens > 0)
-                        tokenLabel.text = $"~{UIMcpUtils.FormatTokenCount(totalTokens)} tokens total";
-                    else if (tokenLabel != null)
-                        tokenLabel.text = "~0 tokens total";
+                    if (totalTokens > 0)
+                        label.tooltip += $"\n~{UIMcpUtils.FormatTokenCount(totalTokens)} tokens total";
                 }
                 UpdateStats();
 

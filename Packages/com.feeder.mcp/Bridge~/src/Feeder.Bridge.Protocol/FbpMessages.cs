@@ -97,3 +97,13 @@ public sealed record HeartbeatMessage
     [Key(0)] public required string UnityInstanceId { get; init; }
     [Key(1)] public FbpEditorState EditorState { get; init; }
 }
+
+[MessagePackObject]
+public sealed record McpClientInfo
+{
+    [Key(0)] public required string SessionId { get; init; }
+    [Key(1)] public string ClientName { get; set; } = string.Empty;
+    [Key(2)] public string ClientTitle { get; set; } = string.Empty;
+    [Key(3)] public string ClientVersion { get; set; } = string.Empty;
+    [Key(4)] public bool IsConnected { get; init; }
+}
