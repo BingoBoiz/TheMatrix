@@ -843,7 +843,7 @@ namespace Feeder.MCP.Editor
                         RedirectStandardError = true,
                         WorkingDirectory = ExecutableFolderPath
                     };
-                    startInfo.EnvironmentVariables["FEEDER_BRIDGE_FILE_LOG_ONLY"] = "1";
+                    startInfo.EnvironmentVariables["FEEDER_MATRIX_FILE_LOG_ONLY"] = "1";
 
                     // Set executable permissions on Unix-like systems
                     if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -1203,17 +1203,17 @@ namespace Feeder.MCP.Editor
             var authOption = UnityMcpPluginEditor.AuthOption;
 
             var args =
-                $"--FeederBridge:Port={port} " +
-                $"--FeederBridge:DefaultToolTimeout={TimeSpan.FromMilliseconds(timeout):c} " +
-                $"--FeederBridge:RequireAuth={authOption == AuthOption.required}";
+                $"--FeederMatrix:Port={port} " +
+                $"--FeederMatrix:DefaultToolTimeout={TimeSpan.FromMilliseconds(timeout):c} " +
+                $"--FeederMatrix:RequireAuth={authOption == AuthOption.required}";
 
             if (authOption == AuthOption.required && !string.IsNullOrEmpty(token))
-                args += $" --FeederBridge:Token={token}";
+                args += $" --FeederMatrix:Token={token}";
 
             return args;
         }
 
-        /// <summary>Normalizes a local bridge URL to the MCP Streamable HTTP endpoint.</summary>
+        /// <summary>Normalizes a local matrix URL to the MCP Streamable HTTP endpoint.</summary>
         public static string GetMcpEndpointUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url))

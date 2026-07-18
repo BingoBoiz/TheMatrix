@@ -1,0 +1,65 @@
+# Feeder Local Matrix
+
+Feeder-owned persistent MCP server for Matrix AI Connector: MCP (Streamable HTTP or unified stdio
+mode) on the AI side and SignalR/JSON (FMP/1) on the Unity side. Runs entirely on loopback. The
+distributed file keeps the historical `gamedev-mcp-server.exe` filename only for client-config
+compatibility; its implementation and metadata are Feeder MCP Server.
+
+Docs: [ADRs](Docs/adr/) · [FMP/1 protocol](Docs/protocol/feeder-matrix-protocol-v1.md) · [Compatibility matrix](Docs/mcp-compatibility-matrix.md)
+
+## Layout
+
+```
+src/Feeder.Matrix/           ASP.NET Core matrix: MCP endpoint (/mcp), FMP hub (/fmp), /healthz
+src/Feeder.Matrix.Protocol/  FMP/1 DTOs (MessagePack)
+src/Feeder.StdioShim/        stdio ⇄ Streamable HTTP relay for stdio-only MCP clients
+tests/                       unit / protocol / integration (xunit)
+benchmarks/                  feeder-matrix-bench — MCP latency harness (also used for Phase 0/10 gates)
+Benchmarks/                  recorded baselines + exported tool definitions
+```
+
+## Build & test
+
+Requires .NET SDK 10.0.3xx (pinned in `global.json`).
+
+```
+dotnet build Feeder.Matrix.slnx
+dotnet test  Feeder.Matrix.slnx
+```
+
+## Run (matrix-only, mock backend)
+
+```
+$env:FeederMatrix__EnableMockBackend = 'true'
+dotnet run --project src/Feeder.Matrix          # 127.0.0.1:20270
+```
+
+MCP endpoint: `http://127.0.0.1:20270/mcp` · health: `/healthz` · stdio clients launch the same
+executable with `client-transport=stdio port=20270`; it auto-starts the persistent HTTP mode.
+
+## Benchmark
+
+```
+feeder-matrix-bench baseline --url http://127.0.0.1:20270/mcp --label X --out out.json [--export dir] [--pid N]
+```
+
+Measured 2026-07-10 (same machine, 0 errors on every case):
+
+| Case (p50/p95 ms) | Legacy upstream local 8.0.1 | Feeder matrix (mock) |
+|---|---|---|
+| ping warm ×10k | 1.84 / 3.47 | **0.27 / 0.44** |
+| tools/list ×1k | 117.7 / 172.9 (145 KB) | 0.27 / 0.44 (mock; parity target ≤10 ms cached) |
+| tools/call ping ×N | 10.4 / 15.1 (via Unity) | 0.25 / 0.40 (mock — Unity link lands in Phase 4) |
+| session initialize ×50 | 4.0 / 8.3 | 0.85 / 1.33 |
+
+The mock numbers bound matrix routing overhead (SLO p95 ≤ 2 ms — met). End-to-end comparison
+against a live Unity editor is the Phase 10 gate.
+
+## Status
+
+- [x] Phase 0 — baseline + definition export (`Benchmarks/`)
+- [x] Phase 1 — ADRs + FMP/1 spec (`Docs/`)
+- [x] Phase 2 — solution scaffold (net10.0, nullable, warnings-as-errors, lock files)
+- [x] Phase 3 — MCP MVP: initialize, tools/list, tools/call, prompts/resources (empty parity), ping, sessions, stdio shim, health, Serilog stderr+file, loopback+Host validation; 10k-ping soak clean
+- [x] Phase 4 — Unity adapter (live registry publication, tool routing, reconnect, deferred completion)
+- [ ] Phase 5–10 — scheduler, parity+cache, pending ops, security, tuning, migration

@@ -28,7 +28,7 @@ namespace Feeder.MCP
             // are applied here as runtime overrides. The OverrideRecord captures the
             // disk-baseline values so Save() can persist them without leaking the overrides.
             RuntimeOverrides = EnvironmentUtils.ApplyEnvironmentOverrides(unityConnectionConfig);
-            ConfigureBridgeTransport();
+            ConfigureMatrixTransport();
             if (wasCreated)
                 Save();
             IncrementSingletonCount();
@@ -52,7 +52,7 @@ namespace Feeder.MCP
 
         public override void Dispose()
         {
-            DisposeBridgeAdapter();
+            DisposeMatrixAdapter();
             DecrementSingletonCount();
             base.Dispose();
             DisposeMcpPluginInstance();

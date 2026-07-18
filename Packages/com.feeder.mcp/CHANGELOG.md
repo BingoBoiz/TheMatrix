@@ -18,7 +18,7 @@ All notable changes to this package are documented here.
 ## [0.84.0] - 2026-07-16
 
 - Replaced the bundled third-party GameDev MCP server with the Feeder MCP Server 0.2.0.
-- Added the FBP/1 Unity adapter while keeping the existing Unity tool registry and implementations.
+- Added the FMP/1 Unity adapter while keeping the existing Unity tool registry and implementations.
 - Preserved Streamable HTTP and stdio client compatibility in one self-contained executable.
 - Preserved deferred tool completion across Unity compilation and domain reloads.
 - Added loopback-only binding and optional bearer-token authentication for MCP and Unity links.

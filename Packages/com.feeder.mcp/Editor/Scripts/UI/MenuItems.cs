@@ -14,6 +14,9 @@ namespace Feeder.MCP.Editor.UI
         [MenuItem("Tools/Feeder/Matrix AI Connector", priority = -18)]
         public static void ShowWindow() => MainWindowEditor.ShowWindow();
 
+        [MenuItem("Tools/Feeder/Matrix Space", priority = -17)]
+        public static void ShowMatrixSpace() => MatrixSpaceWindow.ShowWindow();
+
         [MenuItem("Tools/Feeder/MCP/Server/Reinstall Binaries", priority = 1000)]
         public static Task ReinstallServer() => McpServerManager.InstallServerBinaryIfNeeded(force: true);
 

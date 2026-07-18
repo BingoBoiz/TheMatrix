@@ -50,9 +50,9 @@ ExportedObj/
 *.opendb
 *.VC.db
 
-# The package contains buildable .NET bridge sources. Keep their project files while the
-# Bridge~/.gitignore continues to exclude generated bin/ and obj/ directories.
-!Packages/com.feeder.mcp/Bridge~/**/*.csproj
+# The package contains buildable .NET matrix sources. Keep their project files while the
+# Matrix~/.gitignore continues to exclude generated bin/ and obj/ directories.
+!Packages/com.feeder.mcp/Matrix~/**/*.csproj
 
 # Unity3D generated meta files
 *.pidb.meta

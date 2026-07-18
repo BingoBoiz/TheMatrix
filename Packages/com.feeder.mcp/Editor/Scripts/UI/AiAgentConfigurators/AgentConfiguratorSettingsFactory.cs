@@ -5,7 +5,7 @@ using UnityConnectionMode = Feeder.MCP.ConnectionMode;
 namespace Feeder.MCP.Editor.UI
 {
     /// <summary>
-    /// Bridges Unity's editor/connection state into the engine-agnostic
+    /// Adapts Unity's editor/connection state to the engine-agnostic
     /// <see cref="AgentConfig.AgentConfiguratorSettings"/> consumed by the shared
     /// <c>Feeder.McpPlugin.AgentConfig</c> module. This is the single place that maps
     /// Unity's statics (<see cref="UnityMcpPluginEditor.Port"/>, <c>.Host</c>, <c>.Token</c>, …,

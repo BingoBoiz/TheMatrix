@@ -125,8 +125,8 @@ namespace Feeder.MCP.Editor.UI
 
         private void FetchAiAgentData(int retryCount = 3, int retryDelayMs = 3000)
         {
-            // The Feeder Local Bridge pushes MCP client changes into McpManager over FBP
-            // (see FeederBridgeAdapter.PublishMcpClients), so the authoritative client set is the
+            // The Feeder Local Matrix pushes MCP client changes into McpManager over FMP
+            // (see FeederMatrixAdapter.PublishMcpClients), so the authoritative client set is the
             // local ActiveClients list — no RPC round-trip needed.
             var manager = UnityMcpPluginEditor.Instance.McpPluginInstance?.McpManager;
             if (manager == null)

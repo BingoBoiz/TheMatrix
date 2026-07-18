@@ -1,0 +1,1180 @@
+/* ==========================================================================
+   Matrix Space — multi-agent workspace, Matrix green-on-black.
+   Layout + theming in one sheet; shared widgets come from common/.
+   ========================================================================== */
+
+@import url("common/_base.uss");
+@import url("common/_typography.uss");
+@import url("common/_buttons.uss");
+@import url("common/_forms.uss");
+@import url("common/_status-indicators.uss");
+@import url("common/_animations.uss");
+
+.matrix-root {
+    flex-grow: 1;
+    background-color: rgba(1, 10, 3, 0.88);
+    color: rgb(140, 235, 160);
+}
+
+.matrix-root .unity-label {
+    color: rgb(140, 235, 160);
+}
+
+/* ── Topbar ──────────────────────────────────────────────────────────── */
+
+.matrix-topbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 10px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.35);
+    background-color: rgba(0, 18, 6, 0.7);
+}
+
+.matrix-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: rgb(60, 255, 100);
+    letter-spacing: 3px;
+    margin-right: 14px;
+}
+
+.matrix-breadcrumb {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    letter-spacing: 1px;
+}
+
+.matrix-topbar-spacer {
+    flex-grow: 1;
+}
+
+.matrix-toolbar-presets {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 8px;
+}
+
+/* ── Main: sidebar + center ──────────────────────────────────────────── */
+
+.matrix-main {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.matrix-sidebar-slot {
+    flex-shrink: 0;
+    flex-direction: column;
+}
+
+.matrix-sidebar {
+    width: 200px;
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 8px 0;
+    border-right-width: 1px;
+    border-right-color: rgba(38, 208, 74, 0.3);
+    background-color: rgba(0, 14, 5, 0.9);
+}
+
+.sidebar-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 2px 12px 6px 12px;
+}
+
+.sidebar-header-label {
+    font-size: 9px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(90, 170, 110);
+}
+
+.sidebar-header-spacer {
+    flex-grow: 1;
+}
+
+.sidebar-add-button {
+    font-size: 12px;
+    padding: 0 5px;
+}
+
+.sidebar-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 5px 10px 5px 0;
+    margin: 1px 6px 1px 0;
+}
+
+.sidebar-item:hover {
+    background-color: rgba(0, 45, 16, 0.4);
+}
+
+.sidebar-item-accent {
+    width: 3px;
+    align-self: stretch;
+    margin-right: 9px;
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.sidebar-item--selected {
+    background-color: rgba(0, 60, 20, 0.4);
+}
+
+.sidebar-item--selected .sidebar-item-accent {
+    background-color: rgb(60, 255, 100);
+}
+
+.sidebar-item--selected .sidebar-item-label {
+    color: rgb(200, 255, 214);
+}
+
+.sidebar-item-icon {
+    font-size: 11px;
+    color: rgb(90, 170, 110);
+    margin-right: 8px;
+    min-width: 14px;
+    -unity-text-align: middle-center;
+}
+
+.sidebar-item--selected .sidebar-item-icon {
+    color: rgb(60, 255, 100);
+}
+
+.sidebar-item-label {
+    font-size: 11px;
+    color: rgb(140, 235, 160);
+    letter-spacing: 1px;
+    flex-grow: 1;
+}
+
+.sidebar-badge {
+    font-size: 9px;
+    color: rgb(1, 10, 3);
+    background-color: rgba(38, 208, 74, 0.85);
+    border-radius: 7px;
+    padding: 0 5px;
+    min-width: 14px;
+    -unity-text-align: middle-center;
+}
+
+.sidebar-separator {
+    height: 1px;
+    margin: 6px 12px;
+    background-color: rgba(38, 208, 74, 0.25);
+}
+
+.sidebar-spacer {
+    flex-grow: 1;
+}
+
+.matrix-center {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.matrix-center-view {
+    flex-grow: 1;
+}
+
+.matrix-cli-status {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    margin-right: 10px;
+}
+
+.matrix-settings-btn {
+    font-size: 14px;
+    padding: 2px 6px;
+}
+
+/* ── Settings panel ──────────────────────────────────────────────────── */
+
+.matrix-settings-panel {
+    flex-grow: 1;
+    padding: 10px 14px;
+    background-color: rgba(0, 60, 20, 0.12);
+}
+
+.matrix-settings-title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(60, 255, 100);
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+}
+
+.matrix-settings-hint {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    margin-left: 4px;
+    margin-bottom: 4px;
+}
+
+.matrix-settings-panel .unity-toggle {
+    margin: 2px 4px;
+}
+
+/* ── Body: side panels + grid ────────────────────────────────────────── */
+
+.matrix-body {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.matrix-side-panel {
+    width: 260px;
+    flex-shrink: 0;
+    flex-direction: column;
+    margin: 4px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.3);
+    background-color: rgba(0, 18, 6, 0.85);
+}
+
+.side-panel-title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(60, 255, 100);
+    padding: 6px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.25);
+}
+
+.side-panel-scroll {
+    flex-grow: 1;
+    padding: 4px;
+}
+
+.matrix-toolbar-toggle {
+    font-size: 10px;
+    letter-spacing: 1px;
+    margin-left: 6px;
+}
+
+.toolbar-toggle-active {
+    color: rgb(1, 10, 3);
+    background-color: rgb(38, 208, 74);
+}
+
+/* ── Mission panel ───────────────────────────────────────────────────── */
+
+.matrix-mission-panel {
+    padding: 8px 12px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.35);
+    background-color: rgba(0, 60, 20, 0.18);
+}
+
+.mission-input {
+    min-height: 48px;
+}
+
+.mission-input .unity-text-field__input {
+    white-space: normal;
+}
+
+.mission-roles {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 4px 0;
+}
+
+.mission-role-toggle {
+    margin-right: 12px;
+}
+
+.mission-launch {
+    align-self: flex-start;
+    margin-top: 2px;
+}
+
+/* ── Kanban board ────────────────────────────────────────────────────── */
+
+.kanban-board {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 6px 10px;
+}
+
+.kanban-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 2px 8px 2px;
+}
+
+.kanban-title {
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(60, 255, 100);
+    margin-right: 8px;
+}
+
+.kanban-count {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+}
+
+.kanban-header-spacer {
+    flex-grow: 1;
+}
+
+.kanban-new-task {
+    margin-left: 6px;
+}
+
+.kanban-scroll {
+    flex-grow: 1;
+}
+
+.kanban-columns {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.kanban-column {
+    flex-grow: 1;
+    flex-basis: 0;
+    min-width: 160px;
+    flex-direction: column;
+    margin: 0 4px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.25);
+    border-top-width: 2px;
+    background-color: rgba(0, 18, 6, 0.7);
+}
+
+.kanban-column-todo { border-top-color: rgb(90, 170, 110); }
+.kanban-column-inprogress { border-top-color: rgb(60, 255, 100); }
+.kanban-column-inreview { border-top-color: rgb(180, 255, 140); }
+.kanban-column-complete { border-top-color: rgb(140, 235, 160); }
+.kanban-column-cancelled { border-top-color: rgba(140, 235, 160, 0.35); }
+
+.kanban-drop-target {
+    background-color: rgba(0, 60, 20, 0.5);
+    border-color: rgb(60, 255, 100);
+}
+
+.kanban-column-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.2);
+}
+
+.kanban-column-title {
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgb(140, 235, 160);
+    flex-grow: 1;
+}
+
+.kanban-column-count {
+    font-size: 9px;
+    color: rgb(1, 10, 3);
+    background-color: rgba(38, 208, 74, 0.7);
+    border-radius: 7px;
+    padding: 0 5px;
+    min-width: 14px;
+    -unity-text-align: middle-center;
+}
+
+.kanban-column-scroll {
+    flex-grow: 1;
+    padding: 4px;
+}
+
+.kanban-card {
+    flex-direction: row;
+    margin: 2px 0;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.3);
+    background-color: rgba(0, 30, 10, 0.7);
+}
+
+.kanban-card-stripe {
+    width: 3px;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.kanban-stripe-critical { background-color: rgb(255, 120, 90); }
+.kanban-stripe-high { background-color: rgb(255, 210, 100); }
+.kanban-stripe-medium { background-color: rgb(60, 255, 100); }
+.kanban-stripe-low { background-color: rgb(90, 170, 110); }
+
+.kanban-card-body {
+    flex-grow: 1;
+    padding: 5px 6px;
+}
+
+.kanban-card-title {
+    font-size: 11px;
+    color: rgb(170, 255, 190);
+    white-space: normal;
+    margin-bottom: 3px;
+}
+
+.kanban-card-chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-bottom: 3px;
+}
+
+.kanban-chip {
+    font-size: 8px;
+    letter-spacing: 1px;
+    padding: 0 4px;
+    margin: 1px 3px 1px 0;
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.4);
+    color: rgb(140, 235, 160);
+}
+
+.kanban-chip-critical { color: rgb(255, 120, 90); border-color: rgba(255, 120, 90, 0.6); }
+.kanban-chip-high { color: rgb(255, 210, 100); border-color: rgba(255, 210, 100, 0.6); }
+.kanban-chip-running { color: rgb(60, 255, 100); border-color: rgba(60, 255, 100, 0.7); }
+.kanban-chip-failed { color: rgb(255, 120, 90); border-color: rgba(255, 120, 90, 0.6); }
+.kanban-chip-assigned { color: rgb(90, 170, 110); }
+
+.kanban-card-buttons {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.kanban-card-editor {
+    flex-direction: column;
+    padding: 5px 6px;
+}
+
+.kanban-card-edit-prompt {
+    min-height: 40px;
+}
+
+.kanban-card-edit-prompt .unity-text-field__input {
+    white-space: normal;
+}
+
+.kanban-card-dragging {
+    opacity: 0.45;
+}
+
+.kanban-card-ghost {
+    position: absolute;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: rgb(1, 10, 3);
+    background-color: rgba(60, 255, 100, 0.9);
+    border-radius: 3px;
+}
+
+/* ── Memory workspace (3-pane) ───────────────────────────────────────── */
+
+.memory-workspace {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.memory-pane-title {
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(60, 255, 100);
+    padding: 6px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.25);
+}
+
+.memory-list-pane {
+    width: 220px;
+    flex-shrink: 0;
+    flex-direction: column;
+    border-right-width: 1px;
+    border-right-color: rgba(38, 208, 74, 0.25);
+    background-color: rgba(0, 16, 6, 0.8);
+}
+
+.memory-search {
+    margin: 6px 8px 2px 8px;
+}
+
+.memory-stats {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+    margin: 2px 10px 6px 10px;
+}
+
+.memory-list-scroll {
+    flex-grow: 1;
+}
+
+.memory-section-header {
+    font-size: 9px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(90, 170, 110);
+    margin: 8px 10px 2px 10px;
+}
+
+.memory-list-item {
+    flex-direction: row;
+    align-items: center;
+    padding: 3px 10px;
+}
+
+.memory-list-item:hover {
+    background-color: rgba(0, 45, 16, 0.4);
+}
+
+.memory-list-item--selected {
+    background-color: rgba(0, 60, 20, 0.5);
+}
+
+.memory-list-item--orphan .memory-list-item-label {
+    color: rgba(140, 235, 160, 0.45);
+}
+
+.memory-list-item-icon {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+    margin-right: 6px;
+}
+
+.memory-list-item-label {
+    font-size: 11px;
+    color: rgb(140, 235, 160);
+    flex-grow: 1;
+}
+
+.memory-list-item--selected .memory-list-item-label {
+    color: rgb(200, 255, 214);
+}
+
+.memory-list-item-links {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+}
+
+.memory-list-bottom {
+    flex-direction: row;
+    padding: 6px 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(38, 208, 74, 0.25);
+}
+
+.memory-list-bottom .unity-button {
+    margin-right: 4px;
+}
+
+.memory-new-editor {
+    padding: 4px 8px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.4);
+    margin: 4px 8px;
+}
+
+.memory-center-pane {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.memory-center-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 5px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.2);
+}
+
+.memory-center-header-spacer {
+    flex-grow: 1;
+}
+
+.memory-file-label {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+}
+
+.memory-editor-pane {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.memory-editor-scroll {
+    flex-grow: 1;
+    padding: 4px 6px;
+}
+
+.memory-editor-field .unity-text-field__input {
+    white-space: normal;
+    min-height: 240px;
+}
+
+.memory-editor-buttons {
+    flex-direction: row;
+    padding: 4px 8px;
+    border-top-width: 1px;
+    border-top-color: rgba(38, 208, 74, 0.2);
+}
+
+.memory-editor-buttons .unity-button {
+    margin-right: 4px;
+}
+
+.memory-graph {
+    flex-grow: 1;
+}
+
+.memory-graph-label {
+    position: absolute;
+    font-size: 9px;
+    color: rgb(140, 235, 160);
+    width: 80px;
+    -unity-text-align: upper-center;
+}
+
+.memory-inspector-pane {
+    width: 200px;
+    flex-shrink: 0;
+    flex-direction: column;
+    border-left-width: 1px;
+    border-left-color: rgba(38, 208, 74, 0.25);
+    background-color: rgba(0, 16, 6, 0.8);
+}
+
+.memory-inspector-section {
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgb(140, 235, 160);
+    margin: 8px 10px 2px 10px;
+}
+
+.memory-inspector-subsection {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+    margin: 6px 10px 2px 10px;
+}
+
+.memory-link-row {
+    font-size: 10px;
+    color: rgb(120, 220, 255);
+    margin: 1px 14px;
+}
+
+.memory-link-row:hover {
+    color: rgb(200, 255, 214);
+}
+
+.memory-link-row--missing {
+    color: rgba(140, 235, 160, 0.4);
+}
+
+.memory-link-row-empty {
+    font-size: 10px;
+    color: rgba(140, 235, 160, 0.35);
+    margin: 1px 14px;
+}
+
+/* ── Agent config sections (CONFIG > AGENTS) ─────────────────────────── */
+
+
+.matrix-agents-title {
+    margin-top: 10px;
+}
+
+.agent-config-section {
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.25);
+    background-color: rgba(0, 30, 10, 0.4);
+    margin: 4px 0;
+    padding: 5px 8px;
+}
+
+.agent-config-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+.agent-config-header .unity-button {
+    margin-left: 4px;
+    font-size: 9px;
+}
+
+.agent-config-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+.agent-config-title {
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgb(60, 255, 100);
+    margin-right: 8px;
+}
+
+.agent-config-status {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+}
+
+.agent-config-field {
+    margin: 1px 0;
+}
+
+.agent-config-field > .unity-base-field__label {
+    min-width: 82px;
+    font-size: 10px;
+}
+
+.agent-config-env .unity-text-field__input {
+    white-space: normal;
+    min-height: 26px;
+}
+
+/* ── Pane grid ───────────────────────────────────────────────────────── */
+
+.matrix-pane-grid {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 4px;
+}
+
+.matrix-pane-row {
+    flex-direction: row;
+    flex-grow: 1;
+    flex-basis: 0;
+}
+
+/* ── Agent pane ──────────────────────────────────────────────────────── */
+
+.agent-pane {
+    flex-grow: 1;
+    flex-basis: 0;
+    flex-direction: column;
+    margin: 3px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.3);
+    background-color: rgba(0, 18, 6, 0.75);
+}
+
+.agent-pane-header {
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.25);
+    background-color: rgba(0, 40, 14, 0.4);
+}
+
+.agent-pane-led {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+
+.agent-pane-name {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(60, 255, 100);
+    letter-spacing: 2px;
+    margin-right: 8px;
+    flex-shrink: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-pane-state {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    letter-spacing: 1px;
+    flex-shrink: 0;
+}
+
+.agent-pane-header-spacer {
+    flex-grow: 1;
+}
+
+.agent-pane-cost {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    margin-right: 6px;
+}
+
+.agent-pane-reset {
+    font-size: 13px;
+    padding: 0 4px;
+}
+
+.agent-pane-header-btn {
+    font-size: 12px;
+    padding: 0 4px;
+    margin-left: 2px;
+    color: rgb(90, 170, 110);
+}
+
+.agent-pane-header-btn:hover {
+    color: rgb(60, 255, 100);
+}
+
+.agent-pane-config-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 3px 8px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(38, 208, 74, 0.25);
+    background-color: rgba(0, 30, 10, 0.5);
+}
+
+.agent-pane--active {
+    border-color: rgb(60, 255, 100);
+}
+
+/* ── Transcript ──────────────────────────────────────────────────────── */
+
+.agent-pane-transcript {
+    flex-grow: 1;
+    padding: 4px 6px;
+}
+
+.agent-pane-transcript-content {
+    flex-direction: column;
+}
+
+.transcript-entry {
+    margin: 3px 0;
+    white-space: normal;
+}
+
+.transcript-entry .unity-label {
+    white-space: normal;
+}
+
+.transcript-prefix {
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    margin-bottom: 1px;
+}
+
+.transcript-entry-user .transcript-prefix {
+    color: rgb(220, 255, 228);
+}
+
+.transcript-entry-user .transcript-text {
+    color: rgb(200, 245, 210);
+}
+
+.transcript-entry-assistant .transcript-prefix {
+    color: rgb(60, 255, 100);
+}
+
+.transcript-entry-assistant .transcript-text {
+    color: rgb(140, 235, 160);
+}
+
+.transcript-entry-tool {
+    margin: 1px 0;
+}
+
+.transcript-entry-tool .transcript-text {
+    font-size: 10px;
+    color: rgba(90, 170, 110, 0.85);
+}
+
+.transcript-entry-system .transcript-text {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    -unity-font-style: italic;
+}
+
+.transcript-entry-error .transcript-text {
+    color: rgb(255, 120, 90);
+}
+
+/* ── Input row ───────────────────────────────────────────────────────── */
+
+.agent-pane-input-row {
+    flex-direction: row;
+    align-items: flex-end;
+    padding: 4px 6px;
+    border-top-width: 1px;
+    border-top-color: rgba(38, 208, 74, 0.25);
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.agent-pane-input {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-right: 4px;
+    max-height: 80px;
+}
+
+.agent-pane-input .unity-text-field__input {
+    background-color: rgba(0, 25, 8, 0.6);
+    border-color: rgba(38, 208, 74, 0.25);
+    color: rgb(170, 255, 190);
+    white-space: normal;
+}
+
+.agent-pane-send,
+.agent-pane-stop {
+    min-width: 48px;
+    height: 22px;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+}
+
+/* ── Backend dropdown (pane header) ──────────────────────────────────── */
+
+.agent-pane-backend-slot {
+    flex-direction: row;
+    align-items: center;
+    margin-right: 6px;
+    flex-shrink: 0;
+}
+
+.agent-pane-backend {
+    width: 118px;
+    margin: 0;
+    font-size: 10px;
+}
+
+.agent-pane-model {
+    width: 92px;
+    margin: 0 0 0 4px;
+    font-size: 10px;
+}
+
+.agent-pane-model .unity-base-popup-field__input {
+    background-color: rgba(0, 25, 8, 0.6);
+    border-color: rgba(38, 208, 74, 0.35);
+    color: rgb(170, 255, 190);
+    padding: 0 4px;
+    min-height: 18px;
+}
+
+.agent-pane-model .unity-base-popup-field__text {
+    color: rgb(170, 255, 190);
+    font-size: 10px;
+}
+
+.agent-pane-backend .unity-base-popup-field__input {
+    background-color: rgba(0, 25, 8, 0.6);
+    border-color: rgba(38, 208, 74, 0.35);
+    color: rgb(170, 255, 190);
+    padding: 0 4px;
+    min-height: 18px;
+}
+
+.agent-pane-backend:hover .unity-base-popup-field__input {
+    border-color: rgba(38, 208, 74, 0.7);
+    background-color: rgba(0, 35, 12, 0.7);
+}
+
+.agent-pane-backend .unity-base-popup-field__text {
+    color: rgb(170, 255, 190);
+    font-size: 10px;
+}
+
+/* ── External agents (CONFIG) ────────────────────────────────────────── */
+
+.matrix-external-agents {
+    margin-top: 6px;
+}
+
+.matrix-external-agents .unity-foldout__text {
+    font-size: 11px;
+    -unity-font-style: bold;
+    letter-spacing: 2px;
+    color: rgb(60, 255, 100);
+}
+
+.matrix-settings-agent-header {
+    font-size: 10px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    color: rgb(60, 255, 100);
+    margin-top: 6px;
+    margin-left: 4px;
+}
+
+/* ── Status LED recolors (Matrix palette) ────────────────────────────── */
+
+.agent-pane-led.status-indicator-circle-disconnected {
+    background-color: rgba(38, 208, 74, 0.25);
+    border-color: rgba(38, 208, 74, 0.4);
+}
+
+.agent-pane-led.status-indicator-circle-online {
+    background-color: rgb(60, 255, 100);
+}
+
+.agent-pane-led.status-indicator-circle-connecting {
+    border-color: rgb(60, 255, 100);
+}
+
+.agent-pane-led.led-error {
+    background-color: rgb(255, 120, 90);
+    border-color: rgb(255, 120, 90);
+}
+
+/* ── Swarm board ─────────────────────────────────────────────────────── */
+
+.swarm-board {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 8px;
+}
+
+.swarm-setup-bar {
+    flex-direction: column;
+    padding: 8px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.3);
+    background-color: rgba(0, 18, 6, 0.75);
+}
+
+.swarm-running-bar {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 10px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.3);
+    background-color: rgba(0, 40, 14, 0.4);
+}
+
+.swarm-running-tag {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(60, 255, 100);
+    letter-spacing: 2px;
+    margin-right: 8px;
+}
+
+.swarm-running-mission {
+    font-size: 11px;
+    color: rgb(170, 235, 190);
+}
+
+.swarm-running-spacer {
+    flex-grow: 1;
+}
+
+.swarm-running-live {
+    font-size: 10px;
+    color: rgb(90, 170, 110);
+    margin-right: 10px;
+}
+
+.swarm-running-timer {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(60, 255, 100);
+    margin-right: 10px;
+}
+
+.swarm-canvas {
+    flex-grow: 1;
+    margin: 6px 0;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.2);
+    background-color: rgba(0, 10, 4, 0.5);
+}
+
+.swarm-node {
+    flex-direction: column;
+    padding: 6px 8px;
+    border-width: 1px;
+    border-color: rgba(38, 208, 74, 0.35);
+    background-color: rgba(0, 24, 8, 0.92);
+}
+
+.swarm-node-coordinator {
+    border-color: rgb(60, 255, 100);
+    background-color: rgba(0, 40, 14, 0.95);
+}
+
+.swarm-node-header {
+    flex-direction: row;
+    align-items: center;
+}
+
+.swarm-node-badge {
+    font-size: 9px;
+    -unity-font-style: bold;
+    color: rgb(60, 255, 100);
+    letter-spacing: 1px;
+    margin-right: 6px;
+}
+
+.swarm-node-name {
+    font-size: 10px;
+    color: rgb(170, 235, 190);
+    flex-grow: 1;
+}
+
+.swarm-node-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+    background-color: rgba(38, 208, 74, 0.35);
+}
+
+.swarm-node-dot-busy {
+    background-color: rgb(60, 255, 100);
+}
+
+.swarm-node-dot-error {
+    background-color: rgb(255, 120, 90);
+}
+
+.swarm-node-activity {
+    font-size: 9px;
+    color: rgb(90, 170, 110);
+    margin-top: 3px;
+    white-space: normal;
+}
+
+.swarm-bottom {
+    flex-direction: column;
+}
+
+.swarm-chips {
+    flex-direction: row;
+    margin-bottom: 4px;
+}
+
+.swarm-chip {
+    font-size: 10px;
+    padding: 2px 8px;
+    margin-right: 4px;
+}
+
+.swarm-input-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.swarm-target {
+    width: 130px;
+    margin-right: 4px;
+}
+
+.swarm-command-input {
+    flex-grow: 1;
+    margin-right: 4px;
+}
