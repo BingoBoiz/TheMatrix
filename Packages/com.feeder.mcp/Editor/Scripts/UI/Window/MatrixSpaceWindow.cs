@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using Feeder.MCP.Editor.MatrixSpace;
+using Feeder.MCP.Editor.MatrixSpace.Setup;
 using Feeder.MCP.Editor.UI.MatrixSpace;
 using Feeder.MCP.Editor.UI.Controls;
 using Feeder.MCP.Editor.Utils;
@@ -38,10 +39,12 @@ namespace Feeder.MCP.Editor.UI
         private KanbanBoardView? _board;
         private MemoryWorkspaceView? _memoryPanel;
         private SwarmBoardView? _swarmBoard;
+        private UsageView? _usageView;
         private MatrixSpaceViewRouter? _router;
         private SidebarView? _sidebar;
         private Label? _breadcrumb;
 
+        private ToastLayer? _toasts;
         private MatrixRainRenderer? _matrixRain;
         private IMGUIContainer? _matrixRainContainer;
         private double _lastMatrixRainStep;
@@ -61,6 +64,10 @@ namespace Feeder.MCP.Editor.UI
             base.OnEnable();
             // Re-applies the tab title + icon after domain reloads (ShowWindow only runs once).
             SetupWindowWithIcon();
+
+            ModelCatalogService.EnsureLoaded();
+            ModelCatalogService.Updated -= RefreshAllModelDropdowns;
+            ModelCatalogService.Updated += RefreshAllModelDropdowns;
         }
 
         protected override void OnGUICreated(VisualElement root)
@@ -82,6 +89,10 @@ namespace Feeder.MCP.Editor.UI
             _grid.ApplyPreset(MatrixSpaceSessionStore.instance.GridPresetIndex);
 
             SetupSidebarAndRouter(root);
+
+            // Added last so toasts render above every view (and the detail modal scrim).
+            _toasts = new ToastLayer();
+            root.Add(_toasts);
         }
 
         // ── Sidebar + view router ────────────────────────────────────────
@@ -99,6 +110,14 @@ namespace Feeder.MCP.Editor.UI
             _board = new KanbanBoardView { PaneTargetsProvider = GetPaneTargets };
             _board.DispatchRequested += DispatchTask;
             _board.BoardChanged += UpdateSidebarBadges;
+            _board.ToastRequested += (message, actionLabel, action) =>
+                _toasts?.Show(message, actionLabel, action);
+            _board.CardOpenRequested += card => CardDetailView.Open(
+                rootVisualElement, card, GetPaneTargets, () =>
+                {
+                    _board.Refresh();
+                    UpdateSidebarBadges();
+                });
             _board.AddToClassList("matrix-center-view");
 
             _memoryPanel = new MemoryWorkspaceView();
@@ -110,6 +129,9 @@ namespace Feeder.MCP.Editor.UI
             };
             _swarmBoard.LaunchRequested += LaunchMission;
             _swarmBoard.AddToClassList("matrix-center-view");
+
+            _usageView = new UsageView();
+            _usageView.AddToClassList("matrix-center-view");
 
             _router = new MatrixSpaceViewRouter(center);
             _router.Register(MatrixSpaceView.Construct, root.Q<VisualElement>("pane-grid"));
@@ -124,6 +146,7 @@ namespace Feeder.MCP.Editor.UI
                 UpdateSidebarBadges();
             });
             _router.Register(MatrixSpaceView.Swarm, _swarmBoard, () => _swarmBoard.RefreshFromState());
+            _router.Register(MatrixSpaceView.Usage, _usageView, () => _usageView.OnShown());
             _router.Register(MatrixSpaceView.Config, root.Q<VisualElement>("settings-panel"));
 
             _router.ViewChanged += view =>
@@ -268,11 +291,12 @@ namespace Feeder.MCP.Editor.UI
 
             card.AssignedPaneId = target.PaneId;
             card.DispatchMarker = target.Transcript.Count;
-            card.Status = TaskCardStatus.InProgress;
             card.Failed = false;
-            MatrixSpaceTaskStore.instance.Persist();
+            MatrixSpaceTaskStore.instance.LogActivity(card, "dispatched", $"→ {target.DisplayName}");
+            MatrixSpaceTaskStore.instance.ReorderCard(card, TaskCardStatus.InProgress, int.MaxValue);
 
             target.Send($"[TASK] {card.Title}\n\n{card.Prompt}");
+            _toasts?.Show($"'{card.Title}' dispatched to {target.DisplayName}");
             _board?.Refresh();
             UpdateSidebarBadges();
         }
@@ -303,13 +327,17 @@ namespace Feeder.MCP.Editor.UI
 
                 if (success)
                 {
-                    card.Status = TaskCardStatus.InReview;
+                    store.LogActivity(card, "agent-finished", $"{session.DisplayName} → IN REVIEW");
+                    store.ReorderCard(card, TaskCardStatus.InReview, int.MaxValue);
+                    _toasts?.Show($"'{card.Title}' → IN REVIEW");
                 }
                 else
                 {
-                    card.Status = TaskCardStatus.Todo;
                     card.Failed = true;
                     card.AssignedPaneId = null;
+                    store.LogActivity(card, "agent-failed", $"{session.DisplayName} → back to TO DO");
+                    store.ReorderCard(card, TaskCardStatus.Todo, int.MaxValue);
+                    _toasts?.Show($"'{card.Title}' failed — back to TO DO");
                 }
                 changed = true;
             }
@@ -356,6 +384,12 @@ namespace Feeder.MCP.Editor.UI
             });
             root.Q<VisualElement>("grid-preset-slot").Add(_presetControl);
 
+            var usageChip = new UsageIndicatorView();
+            usageChip.Clicked += () => _router?.Show(MatrixSpaceView.Usage);
+            root.Q<VisualElement>("usage-slot")?.Add(usageChip);
+
+            root.Q<VisualElement>("mcp-clients-slot")?.Add(new McpClientsIndicatorView());
+
             root.Q<Button>("kill-all-button").clicked += () =>
             {
                 foreach (var session in _sessions.Values)
@@ -388,12 +422,41 @@ namespace Feeder.MCP.Editor.UI
             if (agentsContainer == null)
                 return;
 
+            agentsContainer.Add(BuildSetupAllRow());
+
             foreach (var preset in AgentBackendCatalog.Presets)
             {
                 var section = new AgentConfigSectionView(preset);
                 section.ModelsEdited += RefreshAllModelDropdowns;
                 agentsContainer.Add(section);
             }
+        }
+
+        /// <summary>
+        /// One-click machine bootstrap: runs every agent's automated setup sequentially
+        /// (install CLI + write MCP config). Only per-account LOGIN stays manual.
+        /// </summary>
+        private VisualElement BuildSetupAllRow()
+        {
+            var row = new VisualElement();
+            row.AddToClassList("agent-setup-all-row");
+
+            var setupAllButton = new Button(AgentSetupService.RunSetupAll) { text = "SETUP ALL AGENTS" };
+            setupAllButton.AddToClassList("btn-primary");
+            setupAllButton.tooltip = "Installs every supported CLI and writes their MCP configs. " +
+                                     "Afterwards, use each agent's LOGIN button to sign in.";
+            row.Add(setupAllButton);
+
+            var hint = new Label("Installs CLIs + MCP config automatically; sign-in stays manual (LOGIN).");
+            hint.AddToClassList("agent-setup-all-hint");
+            row.Add(hint);
+
+            System.Action refresh = () => setupAllButton.SetEnabled(!AgentSetupService.IsAnyRunning);
+            AgentSetupService.Changed += refresh;
+            row.RegisterCallback<DetachFromPanelEvent>(_ => AgentSetupService.Changed -= refresh);
+            refresh();
+
+            return row;
         }
 
         private void RefreshAllModelDropdowns()
@@ -406,6 +469,10 @@ namespace Feeder.MCP.Editor.UI
             {
                 var record = store.GetOrCreatePane(i);
                 _grid.Panes[i].RefreshModelChoices(record.BackendId);
+                // Keep the persisted selection even when it is not in the refreshed list
+                // (e.g. an older model that dropped out of the live catalog).
+                if (!string.IsNullOrEmpty(record.ModelId))
+                    _grid.Panes[i].SetModelSelection(record.ModelId);
             }
         }
 
@@ -534,6 +601,7 @@ namespace Feeder.MCP.Editor.UI
 
         private void OnDestroy()
         {
+            ModelCatalogService.Updated -= RefreshAllModelDropdowns;
             foreach (var session in _sessions.Values)
                 session.Dispose();
             _sessions.Clear();

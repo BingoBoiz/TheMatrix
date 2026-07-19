@@ -5,6 +5,8 @@
             <ui:VisualElement class="matrix-topbar-spacer" />
             <ui:Label name="topbar-breadcrumb" text="matrix › construct" class="matrix-breadcrumb" />
             <ui:VisualElement class="matrix-topbar-spacer" />
+            <ui:VisualElement name="usage-slot" class="matrix-usage-slot" />
+            <ui:VisualElement name="mcp-clients-slot" class="matrix-mcp-slot" />
             <ui:VisualElement name="grid-preset-slot" class="matrix-toolbar-presets" />
             <ui:Button name="kill-all-button" text="KILL ALL" class="btn-secondary btn-compact matrix-kill-all" tooltip="Terminate every running agent turn." />
             <ui:Button name="settings-button" text="⚙" class="btn-tertiary matrix-settings-btn" tooltip="Matrix Space settings: agents, models, logins, API keys." />

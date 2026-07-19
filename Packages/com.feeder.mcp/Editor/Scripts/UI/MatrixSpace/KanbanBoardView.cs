@@ -25,6 +25,14 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
         /// <summary>Raised after any card mutation (badges may need updating).</summary>
         public event Action? BoardChanged;
 
+        /// <summary>Raised when a card is clicked (without dragging) — opens the detail modal.</summary>
+        public event Action<MatrixSpaceTaskStore.TaskCard>? CardOpenRequested;
+
+        /// <summary>(message, actionLabel, action) — window shows it in the toast layer.</summary>
+        public event Action<string, string?, Action?>? ToastRequested;
+
+        private static (string Name, Color Color)[] CoverPalette => CardDetailView.CoverPalette;
+
         private static readonly (TaskCardStatus Status, string Title, string ClassSuffix)[] Columns =
         {
             (TaskCardStatus.Todo, "TO DO", "todo"),
@@ -41,18 +49,14 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
         private readonly Dictionary<TaskCardStatus, Label> _columnCounts = new();
 
         private bool _newTaskEditorOpen;
-
-        // Drag state.
-        private MatrixSpaceTaskStore.TaskCard? _dragCard;
-        private VisualElement? _dragSource;
-        private VisualElement? _ghost;
-        private int _dragPointerId = -1;
-        private Vector3 _dragStart;
-        private bool _dragActive;
+        private string _filter = string.Empty;
+        private readonly TextField _filterField;
+        private readonly KanbanDragController _drag;
 
         public KanbanBoardView()
         {
             AddToClassList("kanban-board");
+            focusable = true;
 
             var header = new VisualElement();
             header.AddToClassList("kanban-header");
@@ -68,6 +72,16 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             var spacer = new VisualElement();
             spacer.AddToClassList("kanban-header-spacer");
             header.Add(spacer);
+
+            _filterField = new TextField { tooltip = "Filter cards (F) — title, label, priority" };
+            _filterField.AddToClassList("styled-text-field");
+            _filterField.AddToClassList("kanban-filter");
+            _filterField.RegisterValueChangedCallback(evt =>
+            {
+                _filter = evt.newValue?.Trim() ?? string.Empty;
+                Refresh();
+            });
+            header.Add(_filterField);
 
             var refresh = new Button(Refresh) { text = "REFRESH" };
             refresh.AddToClassList("btn-secondary");
@@ -92,10 +106,56 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             foreach (var (status, columnTitle, suffix) in Columns)
                 BuildColumn(status, columnTitle, suffix);
 
-            RegisterCallback<PointerMoveEvent>(OnPointerMove);
-            RegisterCallback<PointerUpEvent>(OnPointerUp);
-            RegisterCallback<PointerCaptureOutEvent>(_ => CancelDrag());
+            _drag = new KanbanDragController(
+                this, scroll, _columnRoots, _columnCards, BuildCard, OnDropCommit);
+            _drag.CardClicked += card => CardOpenRequested?.Invoke(card);
 
+            RegisterCallback<KeyDownEvent>(OnKeyDown);
+
+            Refresh();
+        }
+
+        private void OnKeyDown(KeyDownEvent evt)
+        {
+            if (evt.keyCode == KeyCode.Escape && _drag.DragActive)
+            {
+                _drag.Cancel();
+                evt.StopPropagation();
+                return;
+            }
+
+            // Shortcuts only when the board itself is focused (not while typing in a field).
+            if (evt.target != this)
+                return;
+
+            switch (evt.keyCode)
+            {
+                case KeyCode.N:
+                    ToggleNewTaskEditor();
+                    evt.StopPropagation();
+                    break;
+                case KeyCode.F:
+                    _filterField.Focus();
+                    evt.StopPropagation();
+                    break;
+                case KeyCode.R:
+                    Refresh();
+                    evt.StopPropagation();
+                    break;
+            }
+        }
+
+        private void OnDropCommit(MatrixSpaceTaskStore.TaskCard card, TaskCardStatus status, int index)
+        {
+            if (status != card.Status)
+            {
+                if (status is TaskCardStatus.Complete or TaskCardStatus.Cancelled or TaskCardStatus.Todo)
+                    card.AssignedPaneId = null;
+                if (status == TaskCardStatus.Complete)
+                    card.Failed = false;
+            }
+            MatrixSpaceTaskStore.instance.ReorderCard(card, status, index);
+            BoardChanged?.Invoke();
             Refresh();
         }
 
@@ -141,18 +201,55 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             _newTaskEditorOpen = false;
 
             var counts = new Dictionary<TaskCardStatus, int>();
-            foreach (var card in store.Tasks)
+            foreach (var (status, cards) in _columnCards)
             {
-                if (!_columnCards.TryGetValue(card.Status, out var cards))
-                    continue;
-                cards.Add(BuildCard(card));
-                counts[card.Status] = counts.TryGetValue(card.Status, out var n) ? n + 1 : 1;
+                foreach (var card in store.TasksInOrder(status))
+                {
+                    if (!MatchesFilter(card))
+                        continue;
+                    cards.Add(BuildCard(card));
+                    counts[status] = counts.TryGetValue(status, out var n) ? n + 1 : 1;
+                }
             }
 
             foreach (var (status, label) in _columnCounts)
                 label.text = (counts.TryGetValue(status, out var n) ? n : 0).ToString();
 
             _countLabel.text = $"{store.Tasks.Count} tasks";
+        }
+
+        private bool MatchesFilter(MatrixSpaceTaskStore.TaskCard card)
+        {
+            if (string.IsNullOrEmpty(_filter))
+                return true;
+
+            if (Contains(card.Title) || Contains(card.Prompt) || Contains(card.Priority.ToString()))
+                return true;
+
+            foreach (var labelId in card.LabelIds)
+            {
+                var label = MatrixSpaceTaskStore.instance.FindLabel(labelId);
+                if (label != null && Contains(label.Name))
+                    return true;
+            }
+
+            return false;
+
+            bool Contains(string text)
+                => text.IndexOf(_filter, StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private void DeleteWithUndo(MatrixSpaceTaskStore.TaskCard card)
+        {
+            MatrixSpaceTaskStore.instance.RemoveTask(card.Id);
+            BoardChanged?.Invoke();
+            Refresh();
+            ToastRequested?.Invoke($"Deleted '{card.Title}'", "UNDO", () =>
+            {
+                MatrixSpaceTaskStore.instance.RestoreTask(card);
+                BoardChanged?.Invoke();
+                Refresh();
+            });
         }
 
         // ── New task editor ──────────────────────────────────────────────
@@ -211,6 +308,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
         private VisualElement BuildCard(MatrixSpaceTaskStore.TaskCard card)
         {
+            var store = MatrixSpaceTaskStore.instance;
             var root = new VisualElement { tooltip = card.Prompt };
             root.AddToClassList("kanban-card");
 
@@ -221,6 +319,31 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
             var body = new VisualElement();
             body.AddToClassList("kanban-card-body");
+
+            if (card.HasCover)
+            {
+                var cover = new VisualElement();
+                cover.AddToClassList("kanban-card-cover");
+                cover.style.backgroundColor = card.CoverColor;
+                body.Add(cover);
+            }
+
+            if (card.LabelIds.Count > 0)
+            {
+                var pills = new VisualElement();
+                pills.AddToClassList("kanban-card-labels");
+                foreach (var labelId in card.LabelIds)
+                {
+                    var label = store.FindLabel(labelId);
+                    if (label == null)
+                        continue;
+                    var pill = new VisualElement { tooltip = label.Name };
+                    pill.AddToClassList("kanban-label-pill");
+                    pill.style.backgroundColor = label.Color;
+                    pills.Add(pill);
+                }
+                body.Add(pills);
+            }
 
             var title = new Label(card.Title);
             title.AddToClassList("kanban-card-title");
@@ -234,9 +357,62 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             priorityChip.AddToClassList($"kanban-chip-{card.Priority.ToString().ToLowerInvariant()}");
             chips.Add(priorityChip);
 
+            if (card.DueTicksUtc != 0)
+                chips.Add(BuildDueBadge(card));
+
+            if (card.ChecklistItemCount > 0)
+            {
+                var progress = new Label($"{card.ChecklistDoneCount}/{card.ChecklistItemCount} ✓");
+                progress.AddToClassList("kanban-chip");
+                if (card.ChecklistDoneCount == card.ChecklistItemCount)
+                    progress.AddToClassList("kanban-chip-running");
+                chips.Add(progress);
+            }
+
+            if (!string.IsNullOrEmpty(card.Description))
+            {
+                var desc = new Label("≡") { tooltip = "Has description" };
+                desc.AddToClassList("kanban-chip");
+                chips.Add(desc);
+            }
+
+            if (card.Comments.Count > 0)
+            {
+                var comments = new Label($"🗨 {card.Comments.Count}") { tooltip = "Comments" };
+                comments.AddToClassList("kanban-chip");
+                chips.Add(comments);
+            }
+
+            if (card.Attachments.Count > 0)
+            {
+                var attachments = new Label($"📎 {card.Attachments.Count}") { tooltip = "Attachments" };
+                attachments.AddToClassList("kanban-chip");
+                chips.Add(attachments);
+            }
+
+            foreach (var definition in store.CustomFields)
+            {
+                var value = MatrixSpaceTaskStore.GetFieldValue(card, definition.Id);
+                if (string.IsNullOrEmpty(value))
+                    continue;
+                var text = definition.Type switch
+                {
+                    CustomFieldType.Checkbox => value == "1" ? $"{definition.Name.ToUpperInvariant()} ✓" : null,
+                    CustomFieldType.Date => long.TryParse(value, out var ticks) && ticks > 0
+                        ? $"{definition.Name.ToUpperInvariant()}: {new DateTime(ticks, DateTimeKind.Utc).ToLocalTime():dd MMM}"
+                        : null,
+                    _ => $"{definition.Name.ToUpperInvariant()}: {TruncateChip(value)}",
+                };
+                if (text == null)
+                    continue;
+                var chip = new Label(text) { tooltip = $"{definition.Name}: {value}" };
+                chip.AddToClassList("kanban-chip");
+                chips.Add(chip);
+            }
+
             if (!string.IsNullOrEmpty(card.AssignedPaneId))
             {
-                var assigned = new Label("ASSIGNED");
+                var assigned = new Label(ResolvePaneLabel(card.AssignedPaneId!));
                 assigned.AddToClassList("kanban-chip");
                 assigned.AddToClassList("kanban-chip-assigned");
                 chips.Add(assigned);
@@ -277,12 +453,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
                 buttons.Add(approve);
             }
 
-            var delete = new Button(() =>
-            {
-                MatrixSpaceTaskStore.instance.RemoveTask(card.Id);
-                BoardChanged?.Invoke();
-                Refresh();
-            }) { text = "✕", tooltip = "Delete task" };
+            var delete = new Button(() => DeleteWithUndo(card)) { text = "✕", tooltip = "Delete task" };
             delete.AddToClassList("btn-tertiary");
             buttons.Add(delete);
 
@@ -291,6 +462,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
             root.AddManipulator(new ContextualMenuManipulator(evt =>
             {
+                evt.menu.AppendAction("Open", _ => CardOpenRequested?.Invoke(card));
                 evt.menu.AppendAction("Cancel task",
                     _ => SetStatus(card, TaskCardStatus.Cancelled),
                     card.Status is TaskCardStatus.Complete or TaskCardStatus.Cancelled
@@ -306,36 +478,106 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
                     }, card.Priority == p
                         ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
                 }
-                evt.menu.AppendAction("Delete", _ =>
+                foreach (var boardLabel in MatrixSpaceTaskStore.instance.Labels)
                 {
-                    MatrixSpaceTaskStore.instance.RemoveTask(card.Id);
-                    BoardChanged?.Invoke();
+                    var l = boardLabel;
+                    evt.menu.AppendAction($"Labels/{l.Name}", _ =>
+                    {
+                        if (!card.LabelIds.Remove(l.Id))
+                            card.LabelIds.Add(l.Id);
+                        MatrixSpaceTaskStore.instance.Persist();
+                        Refresh();
+                    }, card.LabelIds.Contains(l.Id)
+                        ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+                }
+                for (var i = 0; i < CoverPalette.Length; i++)
+                {
+                    var c = CoverPalette[i].Color;
+                    evt.menu.AppendAction($"Cover/{CoverPalette[i].Name}", _ =>
+                    {
+                        card.HasCover = true;
+                        card.CoverColor = c;
+                        MatrixSpaceTaskStore.instance.Persist();
+                        Refresh();
+                    }, card.HasCover && card.CoverColor == c
+                        ? DropdownMenuAction.Status.Checked : DropdownMenuAction.Status.Normal);
+                }
+                evt.menu.AppendAction("Cover/None", _ =>
+                {
+                    card.HasCover = false;
+                    MatrixSpaceTaskStore.instance.Persist();
                     Refresh();
-                });
+                }, card.HasCover
+                    ? DropdownMenuAction.Status.Normal : DropdownMenuAction.Status.Disabled);
+                evt.menu.AppendAction("Due/Today", _ => SetDue(card, DateTime.Now));
+                evt.menu.AppendAction("Due/+1 day", _ => SetDue(card, DateTime.Now.AddDays(1)));
+                evt.menu.AppendAction("Due/+1 week", _ => SetDue(card, DateTime.Now.AddDays(7)));
+                evt.menu.AppendAction("Due/Clear", _ => SetDue(card, null),
+                    card.DueTicksUtc == 0
+                        ? DropdownMenuAction.Status.Disabled : DropdownMenuAction.Status.Normal);
+                evt.menu.AppendAction("Delete", _ => DeleteWithUndo(card));
             }));
 
             root.RegisterCallback<PointerDownEvent>(evt =>
             {
-                if (evt.button != 0)
+                if (evt.button != 0 || evt.target is Button)
                     return;
-                _dragCard = card;
-                _dragSource = root;
-                _dragPointerId = evt.pointerId;
-                _dragStart = evt.position;
-                _dragActive = false;
+                _drag.OnCardPointerDown(card, root, evt);
             });
 
             return root;
         }
 
+        private VisualElement BuildDueBadge(MatrixSpaceTaskStore.TaskCard card)
+        {
+            var due = new DateTime(card.DueTicksUtc, DateTimeKind.Utc).ToLocalTime();
+            var badge = new Label($"⏱ {due:dd MMM}") { tooltip = $"Due {due:yyyy-MM-dd HH:mm}" };
+            badge.AddToClassList("kanban-chip");
+            badge.AddToClassList("kanban-due");
+            if (card.DueComplete)
+                badge.AddToClassList("kanban-due-done");
+            else if (due < DateTime.Now)
+                badge.AddToClassList("kanban-due-overdue");
+            else if (due < DateTime.Now.AddHours(24))
+                badge.AddToClassList("kanban-due-soon");
+            return badge;
+        }
+
+        private void SetDue(MatrixSpaceTaskStore.TaskCard card, DateTime? local)
+        {
+            card.DueTicksUtc = local == null
+                ? 0 : local.Value.Date.AddHours(18).ToUniversalTime().Ticks;
+            var store = MatrixSpaceTaskStore.instance;
+            store.LogActivity(card, "due-set",
+                card.DueTicksUtc == 0 ? "cleared" : local!.Value.ToString("yyyy-MM-dd"));
+            store.Persist();
+            Refresh();
+        }
+
+        private static string TruncateChip(string value)
+            => value.Length <= 12 ? value : value[..12] + "…";
+
+        private string ResolvePaneLabel(string paneId)
+        {
+            var targets = PaneTargetsProvider?.Invoke();
+            if (targets != null)
+            {
+                foreach (var (id, label, _) in targets)
+                {
+                    if (id == paneId)
+                        return label.ToUpperInvariant();
+                }
+            }
+            return "ASSIGNED";
+        }
+
         private void SetStatus(MatrixSpaceTaskStore.TaskCard card, TaskCardStatus status)
         {
-            card.Status = status;
             if (status is TaskCardStatus.Complete or TaskCardStatus.Cancelled or TaskCardStatus.Todo)
                 card.AssignedPaneId = null;
             if (status == TaskCardStatus.Complete)
                 card.Failed = false;
-            MatrixSpaceTaskStore.instance.Persist();
+            MatrixSpaceTaskStore.instance.ReorderCard(card, status, int.MaxValue);
             BoardChanged?.Invoke();
             Refresh();
         }
@@ -364,75 +606,5 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             menu.ShowAsContext();
         }
 
-        // ── Drag and drop ────────────────────────────────────────────────
-
-        private void OnPointerMove(PointerMoveEvent evt)
-        {
-            if (_dragCard == null || _dragSource == null || evt.pointerId != _dragPointerId)
-                return;
-
-            if (!_dragActive)
-            {
-                if ((evt.position - _dragStart).sqrMagnitude < 25f)
-                    return;
-
-                _dragActive = true;
-                this.CapturePointer(_dragPointerId);
-                _dragSource.AddToClassList("kanban-card-dragging");
-
-                _ghost = new Label(_dragCard.Title);
-                _ghost.AddToClassList("kanban-card-ghost");
-                _ghost.pickingMode = PickingMode.Ignore;
-                Add(_ghost);
-            }
-
-            if (_ghost != null)
-            {
-                var local = this.WorldToLocal(evt.position);
-                _ghost.style.left = local.x + 8;
-                _ghost.style.top = local.y + 8;
-            }
-
-            foreach (var (status, column) in _columnRoots)
-                column.EnableInClassList("kanban-drop-target",
-                    column.worldBound.Contains(new Vector2(evt.position.x, evt.position.y)));
-        }
-
-        private void OnPointerUp(PointerUpEvent evt)
-        {
-            if (_dragCard == null || evt.pointerId != _dragPointerId)
-                return;
-
-            var card = _dragCard;
-            var wasActive = _dragActive;
-            var position = new Vector2(evt.position.x, evt.position.y);
-            CancelDrag();
-
-            if (!wasActive)
-                return;
-
-            foreach (var (status, column) in _columnRoots)
-            {
-                if (!column.worldBound.Contains(position) || card.Status == status)
-                    continue;
-                SetStatus(card, status);
-                return;
-            }
-        }
-
-        private void CancelDrag()
-        {
-            if (_dragPointerId >= 0 && this.HasPointerCapture(_dragPointerId))
-                this.ReleasePointer(_dragPointerId);
-            _dragSource?.RemoveFromClassList("kanban-card-dragging");
-            _ghost?.RemoveFromHierarchy();
-            foreach (var column in _columnRoots.Values)
-                column.RemoveFromClassList("kanban-drop-target");
-            _dragCard = null;
-            _dragSource = null;
-            _ghost = null;
-            _dragPointerId = -1;
-            _dragActive = false;
-        }
     }
 }

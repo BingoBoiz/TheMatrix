@@ -61,10 +61,44 @@ namespace Feeder.MCP.Editor.MatrixSpace
             _cache[preset.Id] = info;
             info.Availability = AgentAvailability.Probing;
 
+            // Path resolution reads PlayerPrefs and must stay on the main thread;
+            // only the `--version` process probe runs off-thread.
+            string? path;
+            try
+            {
+                path = AgentBackendCatalog.ResolveExecutablePath(preset);
+            }
+            catch (Exception)
+            {
+                path = null;
+            }
+
+            if (path == null)
+            {
+                _cache[preset.Id] = new AgentStatusInfo { Availability = AgentAvailability.NotInstalled };
+                Changed?.Invoke();
+                return;
+            }
+
             var context = SynchronizationContext.Current;
             Task.Run(() =>
             {
-                var result = ProbeSync(preset);
+                AgentStatusInfo result;
+                try
+                {
+                    var version = CliPathResolver.ProbeVersion(path);
+                    result = new AgentStatusInfo
+                    {
+                        Availability = version != null ? AgentAvailability.Ready : AgentAvailability.Unknown,
+                        Version = version,
+                        ResolvedPath = path,
+                    };
+                }
+                catch (Exception)
+                {
+                    result = new AgentStatusInfo { Availability = AgentAvailability.Unknown, ResolvedPath = path };
+                }
+
                 if (context != null)
                 {
                     context.Post(_ =>
@@ -105,21 +139,5 @@ namespace Feeder.MCP.Editor.MatrixSpace
                    lower.Contains("api key");
         }
 
-        private static AgentStatusInfo ProbeSync(AgentBackendPreset preset)
-        {
-            var path = AgentBackendCatalog.ResolveExecutablePath(preset);
-            if (path == null)
-            {
-                return new AgentStatusInfo { Availability = AgentAvailability.NotInstalled };
-            }
-
-            var version = CliPathResolver.ProbeVersion(path);
-            return new AgentStatusInfo
-            {
-                Availability = version != null ? AgentAvailability.Ready : AgentAvailability.Unknown,
-                Version = version,
-                ResolvedPath = path,
-            };
-        }
     }
 }

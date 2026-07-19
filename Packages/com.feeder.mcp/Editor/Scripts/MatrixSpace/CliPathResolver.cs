@@ -34,6 +34,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                // where.exe searches its own process PATH, so tools installed after the
+                // editor launched are only found with the augmented PATH.
+                CliEnvironment.Apply(startInfo);
 
                 using var process = Process.Start(startInfo);
                 if (process == null)
@@ -74,6 +77,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                // npm .cmd shims need node on PATH; the editor's inherited PATH may predate it.
+                CliEnvironment.Apply(startInfo);
 
                 using var process = Process.Start(startInfo);
                 if (process == null)

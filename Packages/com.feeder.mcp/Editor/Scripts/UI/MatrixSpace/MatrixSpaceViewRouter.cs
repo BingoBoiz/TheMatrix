@@ -13,6 +13,8 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
         Memory = 2,
         Swarm = 3,
         Config = 4,
+        // Appended last: MatrixSpaceSessionStore persists the active view as an int index.
+        Usage = 5,
     }
 
     /// <summary>

@@ -173,6 +173,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                CliEnvironment.Apply(startInfo);
 
                 using var process = Process.Start(startInfo);
                 if (process == null)
@@ -215,6 +216,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                 };
+                CliEnvironment.Apply(startInfo);
 
                 using var process = Process.Start(startInfo);
                 if (process == null)

@@ -146,6 +146,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 StandardErrorEncoding = Encoding.UTF8,
             };
 
+            // Applied before extraEnvironment so a user-provided PATH override still wins.
+            CliEnvironment.Apply(startInfo);
+
             if (extraEnvironment != null)
             {
                 foreach (var pair in extraEnvironment)

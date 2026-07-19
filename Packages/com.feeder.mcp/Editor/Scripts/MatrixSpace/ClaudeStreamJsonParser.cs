@@ -146,7 +146,24 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 evt.CostUsd = costProp.GetDecimal();
             }
 
+            if (root.TryGetProperty("usage", out var usage) &&
+                usage.ValueKind == JsonValueKind.Object)
+            {
+                evt.InputTokens = GetLong(usage, "input_tokens");
+                evt.OutputTokens = GetLong(usage, "output_tokens");
+                evt.CacheReadTokens = GetLong(usage, "cache_read_input_tokens");
+                evt.CacheCreationTokens = GetLong(usage, "cache_creation_input_tokens");
+            }
+
             events.Add(evt);
+        }
+
+        private static long GetLong(JsonElement element, string property)
+        {
+            return element.TryGetProperty(property, out var prop) &&
+                   prop.ValueKind == JsonValueKind.Number
+                ? prop.GetInt64()
+                : 0L;
         }
 
         private static bool TryGetContent(JsonElement root, out JsonElement content)

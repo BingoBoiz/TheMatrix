@@ -18,6 +18,10 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public AgentSessionState State { get; private set; } = AgentSessionState.Idle;
         public List<TranscriptEntry> Transcript { get; } = new();
         public decimal TotalCostUsd { get; private set; }
+        public long TotalInputTokens { get; private set; }
+        public long TotalOutputTokens { get; private set; }
+        public long TotalCacheReadTokens { get; private set; }
+        public long TotalCacheCreationTokens { get; private set; }
         public IAgentBackend Backend { get; }
 
         /// <summary>Fired on the main thread after any state/transcript change.</summary>
@@ -107,6 +111,10 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 case AgentEventKind.Result:
                     CompleteLastAssistantEntry();
                     TotalCostUsd += evt.CostUsd;
+                    TotalInputTokens += evt.InputTokens;
+                    TotalOutputTokens += evt.OutputTokens;
+                    TotalCacheReadTokens += evt.CacheReadTokens;
+                    TotalCacheCreationTokens += evt.CacheCreationTokens;
                     if (evt.IsError)
                     {
                         var message = string.IsNullOrEmpty(evt.Text)

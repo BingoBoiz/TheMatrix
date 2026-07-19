@@ -45,6 +45,10 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public bool IsError;
         public decimal CostUsd;
         public int ExitCode;
+        public long InputTokens;
+        public long OutputTokens;
+        public long CacheReadTokens;
+        public long CacheCreationTokens;
 
         /// <summary>
         /// True when <see cref="Text"/> is a raw continuation of the previous assistant text

@@ -52,6 +52,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             Add(spacer);
 
             AddItem(MatrixSpaceView.Swarm, "⌬", "swarm", "One mission, a team of role agents (MatrixSwarm).");
+            AddItem(MatrixSpaceView.Usage, "◔", "usage", "Subscription usage: session & weekly limits per provider.");
             AddItem(MatrixSpaceView.Config, "⚙", "config", "Agents, models, logins, system parameters.");
         }
 
