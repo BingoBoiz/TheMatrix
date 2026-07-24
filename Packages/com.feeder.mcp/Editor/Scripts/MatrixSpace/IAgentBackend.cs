@@ -21,6 +21,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
         /// <summary>Model id for this pane ("default"/null = CLI default).</summary>
         string? ModelOverride { get; set; }
 
+        /// <summary>Permission mode for this pane ("default"/null = global setting). Claude only.</summary>
+        string? PermissionModeOverride { get; set; }
+
         /// <summary>Pane designation (e.g. "AGENT 01") used for the shared mailbox protocol.</summary>
         string? AgentLabel { get; set; }
 

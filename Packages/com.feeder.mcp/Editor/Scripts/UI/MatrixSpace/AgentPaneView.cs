@@ -25,6 +25,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
         private readonly DropdownField _backendDropdown;
         private readonly DropdownField _modelDropdown;
+        private readonly DropdownField _modeDropdown;
         private readonly VisualElement _configRow;
         private readonly Label _configUsageLabel;
 
@@ -34,6 +35,15 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
         private const float ConfigControlGap = 4f;
 
         private readonly System.Collections.Generic.List<string> _backendChoices = new();
+
+        /// <summary>Permission modes for Claude Code (label shown in the drop-up, value passed to --permission-mode).</summary>
+        private static readonly (string Label, string Value)[] PermissionModes =
+        {
+            ("MANUAL", "default"),
+            ("AUTO", "acceptEdits"),
+            ("PLAN", "plan"),
+            ("BYPASS", "bypassPermissions"),
+        };
 
         private AgentSession? _session;
         private int _renderedEntryCount;
@@ -48,6 +58,9 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
         /// <summary>Raised when the user picks a model ("default" = CLI default).</summary>
         public event Action<AgentPaneView, string>? ModelChangeRequested;
+
+        /// <summary>Raised when the user picks a permission mode ("default" = ask/global setting).</summary>
+        public event Action<AgentPaneView, string>? PermissionModeChangeRequested;
 
         /// <summary>Raised when the user toggles the expand button; the grid owns the layout.</summary>
         public event Action<AgentPaneView>? ExpandToggleRequested;
@@ -106,6 +119,29 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             });
             _configRow.Insert(0, _modelDropdown);
             _configRow.Insert(0, _backendDropdown);
+
+            var modeChoices = new System.Collections.Generic.List<string>();
+            foreach (var mode in PermissionModes)
+                modeChoices.Add(mode.Label);
+            _modeDropdown = new DropdownField(modeChoices, 0)
+            {
+                tooltip = "Permission mode for this pane.\n" +
+                          "MANUAL — tools needing approval are denied (headless default).\n" +
+                          "AUTO — auto-accept file edits (acceptEdits).\n" +
+                          "PLAN — read-only planning, no changes (plan).\n" +
+                          "BYPASS — skip all permission checks (bypassPermissions).",
+            };
+            _modeDropdown.AddToClassList("agent-pane-mode");
+            _modeDropdown.AddToClassList("agent-pane-config-dropdown");
+            _modeDropdown.AddToClassList("styled-dropdown");
+            _modeDropdown.RegisterValueChangedCallback(evt =>
+            {
+                var index = Array.FindIndex(PermissionModes, m => m.Label == evt.newValue);
+                if (index >= 0)
+                    PermissionModeChangeRequested?.Invoke(this, PermissionModes[index].Value);
+            });
+            var inputRow = this.Q<VisualElement>("input-row");
+            inputRow.Insert(inputRow.IndexOf(_sendButton), _modeDropdown);
 
             _sendButton.clicked += SendCurrentPrompt;
             _stopButton.clicked += () => _session?.Cancel();
@@ -220,12 +256,25 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
         {
             _selectedBackendId = AgentBackendCatalog.Get(backendId).Id;
             _backendLabel = AgentBackendCatalog.Get(backendId).Label;
+            // Permission modes are a Claude Code concept; hide the drop-up elsewhere.
+            _modeDropdown.style.display = AgentBackendCatalog.Get(backendId).IsClaude
+                ? DisplayStyle.Flex
+                : DisplayStyle.None;
             RebuildBackendChoices();
             ApplySelectedBackendStatusClass();
             RefreshModelChoices(backendId);
             ScheduleConfigRowLayout();
             if (_session != null)
                 _nameLabel.text = BuildTitle(_session);
+        }
+
+        public void SetPermissionModeSelection(string? mode)
+        {
+            var value = string.IsNullOrEmpty(mode) ? "default" : mode!;
+            var index = Array.FindIndex(PermissionModes, m => m.Value == value);
+            if (index < 0)
+                index = 0;
+            _modeDropdown.SetValueWithoutNotify(PermissionModes[index].Label);
         }
 
         public void SetModelSelection(string? model)
@@ -316,6 +365,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             _promptInput.SetEnabled(session.State != AgentSessionState.Exited);
             _backendDropdown.SetEnabled(!busy);
             _modelDropdown.SetEnabled(!busy);
+            _modeDropdown.SetEnabled(!busy);
 
             SyncTranscript(session);
         }

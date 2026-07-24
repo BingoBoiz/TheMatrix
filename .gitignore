@@ -54,6 +54,14 @@ ExportedObj/
 # Matrix~/.gitignore continues to exclude generated bin/ and obj/ directories.
 !Packages/com.feeder.mcp/Matrix~/**/*.csproj
 
+# .NET build output from the embedded MCP package sources (Bridge~, Matrix~, ...).
+# These are regenerated per machine and must never be committed.
+Packages/com.feeder.mcp/**/[Bb]in/
+Packages/com.feeder.mcp/**/[Oo]bj/
+
+# Feeder MCP writes a machine-specific server port here on every Unity launch.
+/.mcp.json
+
 # Unity3D generated meta files
 *.pidb.meta
 *.pdb.meta

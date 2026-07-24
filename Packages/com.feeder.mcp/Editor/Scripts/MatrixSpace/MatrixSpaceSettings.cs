@@ -46,7 +46,10 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         public const string MatrixPersonaSystemPrompt =
             "Immediately adopt the 'matrix' skill persona for this entire session: " +
-            "you are the System, the user is The Architect. Prefix responses with [SYSTEM].";
+            "you are the System, the user is The Architect. Prefix responses with [SYSTEM]. " +
+            "To save tokens only a small core set of Unity tools is enabled up front. " +
+            "When a task needs a Unity operation you don't currently have, call `unity-tool-list` " +
+            "to find the right tool, then `tool-set-enabled-state` to enable it before using it.";
 
         public const string FeederMcpAllowedTools = "mcp__Feeder-MCP__*";
 

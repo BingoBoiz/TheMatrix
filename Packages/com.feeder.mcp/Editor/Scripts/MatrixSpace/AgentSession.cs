@@ -45,6 +45,35 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         public bool CanSend => State is AgentSessionState.Idle or AgentSessionState.WaitingInput or AgentSessionState.Error;
 
+        /// <summary>Rehydrates transcript + totals from a pane record after a domain reload.</summary>
+        public void RestoreFrom(MatrixSpaceSessionStore.PaneRecord record)
+        {
+            Transcript.Clear();
+            Transcript.AddRange(record.Transcript);
+
+            // A reload kills the CLI process, so a mid-stream entry can never finish.
+            var last = Transcript.Count > 0 ? Transcript[^1] : null;
+            if (last is { IsComplete: false })
+                last.IsComplete = true;
+
+            TotalCostUsd = (decimal)record.TotalCostUsd;
+            TotalInputTokens = record.TotalInputTokens;
+            TotalOutputTokens = record.TotalOutputTokens;
+            TotalCacheReadTokens = record.TotalCacheReadTokens;
+            TotalCacheCreationTokens = record.TotalCacheCreationTokens;
+        }
+
+        /// <summary>Writes transcript + totals into the pane record so they survive a reload.</summary>
+        public void SnapshotTo(MatrixSpaceSessionStore.PaneRecord record)
+        {
+            record.Transcript = new List<TranscriptEntry>(Transcript);
+            record.TotalCostUsd = (double)TotalCostUsd;
+            record.TotalInputTokens = TotalInputTokens;
+            record.TotalOutputTokens = TotalOutputTokens;
+            record.TotalCacheReadTokens = TotalCacheReadTokens;
+            record.TotalCacheCreationTokens = TotalCacheCreationTokens;
+        }
+
         public void Send(string prompt)
         {
             if (!CanSend)

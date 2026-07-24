@@ -1,6 +1,7 @@
 #nullable enable
 #if UNITY_EDITOR
 using System.IO;
+using System.Reflection;
 using System.Threading.Tasks;
 using Feeder.MCP.Editor.Utils;
 using UnityEditor;
@@ -16,6 +17,94 @@ namespace Feeder.MCP.Editor.UI
 
         [MenuItem("Tools/Feeder/Matrix Space", priority = -17)]
         public static void ShowMatrixSpace() => MatrixSpaceWindow.ShowWindow();
+
+        [MenuItem("Tools/Feeder/Inspect UI/Matrix Space", priority = -16)]
+        public static void InspectMatrixSpace() => OpenUiDebuggerFor(MatrixSpaceWindow.ShowWindow());
+
+        [MenuItem("Tools/Feeder/Inspect UI/Matrix AI Connector", priority = -15)]
+        public static void InspectMainWindow() => OpenUiDebuggerFor(MainWindowEditor.ShowWindow());
+
+        [MenuItem("Tools/Feeder/Inspect UI/UI Toolkit Debugger", priority = -14)]
+        public static void OpenUiToolkitDebugger() => OpenUiDebuggerFor(null);
+
+        [MenuItem("Tools/Feeder/Inspect UI/IMGUI Debugger", priority = -13)]
+        public static void OpenImguiDebugger()
+        {
+            // Unity's built-in IMGUI Debugger: inspect any IMGUI EditorWindow instruction-by-
+            // instruction, each with a stack trace pointing to the exact source location.
+            if (EditorApplication.ExecuteMenuItem("Window/Analysis/IMGUI Debugger"))
+                return;
+
+            // Fallback for Unity versions where the menu path differs: open the internal
+            // UnityEditor.GUIViewDebuggerWindow directly via reflection.
+            var windowType = FindEditorType("UnityEditor.GUIViewDebuggerWindow");
+            if (windowType != null)
+            {
+                EditorWindow.GetWindow(windowType).Show();
+                return;
+            }
+
+            NotificationPopupWindow.Show(
+                windowTitle: "Error",
+                title: "IMGUI Debugger Not Found",
+                message: "Unity could not open 'Window/Analysis/IMGUI Debugger'. Open it manually from the Window menu.",
+                width: 350,
+                minWidth: 350,
+                height: 200,
+                minHeight: 200);
+        }
+
+        /// <summary>
+        /// Opens Unity's built-in UI Toolkit Debugger (DevTools-style inspector for Editor UI).
+        /// When <paramref name="window"/> is provided, the debugger is targeted directly at it
+        /// via the internal <c>UIElementsDebugger.OpenAndInspectWindow</c> API (reflection);
+        /// otherwise it just opens the debugger for manual window selection.
+        /// </summary>
+        static void OpenUiDebuggerFor(EditorWindow? window)
+        {
+            if (window != null)
+            {
+                window.Focus();
+
+                var debuggerType = FindEditorType("UnityEditor.UIElements.Debugger.UIElementsDebugger");
+                var method = debuggerType?.GetMethod(
+                    "OpenAndInspectWindow",
+                    BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                    binder: null,
+                    types: new[] { typeof(EditorWindow) },
+                    modifiers: null);
+
+                if (method != null)
+                {
+                    method.Invoke(null, new object[] { window });
+                    return;
+                }
+                // Fall through to the generic open if the internal API is unavailable.
+            }
+
+            if (!EditorApplication.ExecuteMenuItem("Window/UI Toolkit/Debugger"))
+            {
+                NotificationPopupWindow.Show(
+                    windowTitle: "Error",
+                    title: "UI Toolkit Debugger Not Found",
+                    message: "Unity could not open 'Window/UI Toolkit/Debugger'. Open it manually from the Window menu.",
+                    width: 350,
+                    minWidth: 350,
+                    height: 200,
+                    minHeight: 200);
+            }
+        }
+
+        static System.Type? FindEditorType(string fullName)
+        {
+            foreach (var assembly in System.AppDomain.CurrentDomain.GetAssemblies())
+            {
+                var type = assembly.GetType(fullName, throwOnError: false);
+                if (type != null)
+                    return type;
+            }
+            return null;
+        }
 
         [MenuItem("Tools/Feeder/MCP/Server/Reinstall Binaries", priority = 1000)]
         public static Task ReinstallServer() => McpServerManager.InstallServerBinaryIfNeeded(force: true);

@@ -18,7 +18,7 @@ namespace Feeder.MCP.Editor.API
         (
             ToolSetEnabledStateId,
             Title = "Tool / Set Enabled State",
-            Enabled = false
+            Enabled = true
         )]
         [AiSkillDescription("Enable or disable MCP tools by name in batch. " +
             "Persists the change via `UnityMcpPluginEditor.Instance.Save()` only when at least one tool actually flipped. " +

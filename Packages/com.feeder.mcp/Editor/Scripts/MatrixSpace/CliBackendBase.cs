@@ -81,6 +81,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public bool IsRunning => _process != null;
         public string? SessionId { get; set; }
         public string? ModelOverride { get; set; }
+        public string? PermissionModeOverride { get; set; }
         public string? AgentLabel { get; set; }
 
         public event Action<AgentEvent>? EventReceived;

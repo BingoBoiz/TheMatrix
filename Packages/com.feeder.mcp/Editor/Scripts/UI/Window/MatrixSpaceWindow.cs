@@ -68,6 +68,26 @@ namespace Feeder.MCP.Editor.UI
             ModelCatalogService.EnsureLoaded();
             ModelCatalogService.Updated -= RefreshAllModelDropdowns;
             ModelCatalogService.Updated += RefreshAllModelDropdowns;
+
+            // Runs before the singleton store is serialized, so the transcripts land in it.
+            AssemblyReloadEvents.beforeAssemblyReload -= SnapshotSessions;
+            AssemblyReloadEvents.beforeAssemblyReload += SnapshotSessions;
+        }
+
+        private void OnDisable()
+        {
+            AssemblyReloadEvents.beforeAssemblyReload -= SnapshotSessions;
+        }
+
+        private void SnapshotSessions()
+        {
+            var store = MatrixSpaceSessionStore.instance;
+            foreach (var session in _sessions.Values)
+            {
+                var record = store.Panes.Find(p => p.PaneId == session.PaneId);
+                if (record != null)
+                    session.SnapshotTo(record);
+            }
         }
 
         protected override void OnGUICreated(VisualElement root)
@@ -187,10 +207,12 @@ namespace Feeder.MCP.Editor.UI
             pane.ResetRequested += OnPaneResetRequested;
             pane.BackendChangeRequested += OnPaneBackendChangeRequested;
             pane.ModelChangeRequested += OnPaneModelChangeRequested;
+            pane.PermissionModeChangeRequested += OnPanePermissionModeChangeRequested;
             pane.ExpandToggleRequested += p => _grid?.ToggleExpanded(p);
             pane.Focused += OnPaneFocused;
             pane.SetBackendSelection(record.BackendId);
             pane.SetModelSelection(record.ModelId);
+            pane.SetPermissionModeSelection(record.PermissionModeId);
             pane.Bind(GetOrCreateSession(record));
             return pane;
         }
@@ -211,12 +233,18 @@ namespace Feeder.MCP.Editor.UI
             var backend = AgentBackendCatalog.Create(record.BackendId);
             backend.SessionId = record.BackendSessionId;
             backend.ModelOverride = record.ModelId;
+            backend.PermissionModeOverride = record.PermissionModeId;
             var session = new AgentSession(record.PaneId, record.DisplayName, backend, record.BackendId);
 
-            if (record.BackendSessionId != null)
+            if (record.Transcript.Count > 0)
+                session.RestoreFrom(record);
+
+            const string reloadNotice = "Matrix reloaded — a new iteration. Conversation context is preserved.";
+            var lastEntry = session.Transcript.Count > 0 ? session.Transcript[^1] : null;
+            if ((record.Transcript.Count > 0 || record.BackendSessionId != null)
+                && lastEntry is not { Kind: TranscriptEntryKind.System, Text: reloadNotice })
             {
-                session.Transcript.Add(new TranscriptEntry(TranscriptEntryKind.System,
-                    "Matrix reloaded — a new iteration. Conversation context is preserved."));
+                session.Transcript.Add(new TranscriptEntry(TranscriptEntryKind.System, reloadNotice));
             }
 
             // Keep the store in sync so a domain reload can resume this conversation.
@@ -250,6 +278,19 @@ namespace Feeder.MCP.Editor.UI
             session.Backend.ModelOverride = model;
         }
 
+        private void OnPanePermissionModeChangeRequested(AgentPaneView pane, string mode)
+        {
+            var session = pane.Session;
+            if (session == null)
+                return;
+
+            var store = MatrixSpaceSessionStore.instance;
+            var index = store.Panes.FindIndex(p => p.PaneId == session.PaneId);
+            if (index >= 0)
+                store.Panes[index].PermissionModeId = mode;
+            session.Backend.PermissionModeOverride = mode;
+        }
+
         private void RestartPane(AgentPaneView pane, bool keepBackend, string? newBackendId)
         {
             var session = pane.Session;
@@ -272,6 +313,7 @@ namespace Feeder.MCP.Editor.UI
             record.BackendId = backendId;
             pane.SetBackendSelection(backendId);
             pane.SetModelSelection(record.ModelId);
+            pane.SetPermissionModeSelection(record.PermissionModeId);
             pane.Bind(GetOrCreateSession(record));
         }
 
@@ -602,6 +644,8 @@ namespace Feeder.MCP.Editor.UI
         private void OnDestroy()
         {
             ModelCatalogService.Updated -= RefreshAllModelDropdowns;
+            // Keep the chat history if the window is reopened later in this editor session.
+            SnapshotSessions();
             foreach (var session in _sessions.Values)
                 session.Dispose();
             _sessions.Clear();

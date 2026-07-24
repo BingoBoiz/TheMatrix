@@ -1531,6 +1531,16 @@
     -unity-text-align: middle-center;
 }
 
+.agent-pane-mode {
+    width: 72px;
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.agent-pane-mode .unity-base-popup-field__input {
+    min-height: 22px;
+}
+
 /* ── Pane config row (backend / model / reset) ─────────────────────── */
 
 .agent-pane-config-control {

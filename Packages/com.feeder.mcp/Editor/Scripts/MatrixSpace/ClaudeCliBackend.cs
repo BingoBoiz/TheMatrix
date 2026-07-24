@@ -82,7 +82,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
             }
             else
             {
-                var permissionMode = MatrixSpaceSettings.PermissionMode.Value;
+                var permissionMode = PermissionModeOverride;
+                if (string.IsNullOrWhiteSpace(permissionMode) || permissionMode == "default")
+                    permissionMode = MatrixSpaceSettings.PermissionMode.Value;
                 if (!string.IsNullOrWhiteSpace(permissionMode) && permissionMode != "default")
                     args.Append(" --permission-mode ").Append(permissionMode.Trim());
 

@@ -20,6 +20,15 @@ namespace Feeder.MCP.Editor.MatrixSpace
             public string BackendId = AgentBackendCatalog.DefaultId;
             public string? BackendSessionId;
             public string? ModelId;
+            public string? PermissionModeId;
+
+            /// <summary>Rendered chat history, snapshotted before reloads so panes rehydrate.</summary>
+            public List<TranscriptEntry> Transcript = new();
+            public double TotalCostUsd;
+            public long TotalInputTokens;
+            public long TotalOutputTokens;
+            public long TotalCacheReadTokens;
+            public long TotalCacheCreationTokens;
         }
 
         [Serializable]
