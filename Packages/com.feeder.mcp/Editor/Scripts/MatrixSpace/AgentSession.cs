@@ -23,6 +23,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public long TotalCacheReadTokens { get; private set; }
         public long TotalCacheCreationTokens { get; private set; }
         public IAgentBackend Backend { get; }
+        private ReloadLease? _reloadLease;
+        private bool _disposed;
 
         /// <summary>Fired on the main thread after any state/transcript change.</summary>
         public event Action<AgentSession>? Changed;
@@ -33,7 +35,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
         /// <summary>Fired once per turn when it settles (true = clean, false = error).</summary>
         public event Action<AgentSession, bool>? TurnEnded;
 
-        public AgentSession(string paneId, string displayName, IAgentBackend backend, string backendId = AgentBackendCatalog.DefaultId)
+        public AgentSession(string paneId, string displayName, IAgentBackend backend,
+            string backendId = AgentBackendCatalog.DefaultId,
+            MatrixSpaceSessionStore.PaneRecord? snapshot = null)
         {
             PaneId = paneId;
             BackendId = backendId;
@@ -41,9 +45,13 @@ namespace Feeder.MCP.Editor.MatrixSpace
             Backend = backend;
             Backend.AgentLabel = displayName;
             Backend.EventReceived += OnBackendEvent;
+            if (snapshot != null)
+                MatrixSpaceSessionStore.instance.RestoreSession(snapshot, this);
         }
 
-        public bool CanSend => State is AgentSessionState.Idle or AgentSessionState.WaitingInput or AgentSessionState.Error;
+        public bool CanSend =>
+            (State is AgentSessionState.Idle or AgentSessionState.WaitingInput or AgentSessionState.Error) &&
+            MatrixSpaceReloadCoordinator.CanStartTurn(out _);
 
         public void Send(string prompt)
         {
@@ -52,6 +60,16 @@ namespace Feeder.MCP.Editor.MatrixSpace
             prompt = prompt.Trim();
             if (prompt.Length == 0)
                 return;
+
+            try
+            {
+                _reloadLease = MatrixSpaceReloadCoordinator.Acquire(PaneId);
+            }
+            catch (Exception ex)
+            {
+                AddEntry(new TranscriptEntry(TranscriptEntryKind.System, ex.Message));
+                return;
+            }
 
             AddEntry(new TranscriptEntry(TranscriptEntryKind.User, prompt));
             SetState(AgentSessionState.Starting);
@@ -64,6 +82,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
             {
                 AddEntry(new TranscriptEntry(TranscriptEntryKind.Error, ex.Message));
                 SetState(AgentSessionState.Error);
+                ReleaseReloadLease();
             }
         }
 
@@ -80,9 +99,13 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         public void Dispose()
         {
+            if (_disposed)
+                return;
+            _disposed = true;
             Backend.EventReceived -= OnBackendEvent;
             Backend.Dispose();
             SetState(AgentSessionState.Exited);
+            ReleaseReloadLease();
         }
 
         private void OnBackendEvent(AgentEvent evt)
@@ -94,11 +117,17 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     break;
 
                 case AgentEventKind.AssistantText:
-                    AppendAssistantText(evt.Text ?? string.Empty, evt.IsDelta);
+                    AppendStreamingText(TranscriptEntryKind.Assistant, evt.Text ?? string.Empty, evt.IsDelta);
+                    SetState(AgentSessionState.Streaming);
+                    break;
+
+                case AgentEventKind.AssistantThinking:
+                    AppendStreamingText(TranscriptEntryKind.Thinking, evt.Text ?? string.Empty, evt.IsDelta);
                     SetState(AgentSessionState.Streaming);
                     break;
 
                 case AgentEventKind.ToolUse:
+                    CompleteLastStreamingEntry();
                     AddEntry(new TranscriptEntry(TranscriptEntryKind.ToolUse,
                         $"> executing: {evt.ToolName ?? "unknown"}", evt.ToolName));
                     break;
@@ -109,7 +138,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     break;
 
                 case AgentEventKind.Result:
-                    CompleteLastAssistantEntry();
+                    CompleteLastStreamingEntry();
                     TotalCostUsd += evt.CostUsd;
                     TotalInputTokens += evt.InputTokens;
                     TotalOutputTokens += evt.OutputTokens;
@@ -135,10 +164,12 @@ namespace Feeder.MCP.Editor.MatrixSpace
                     AddEntry(new TranscriptEntry(TranscriptEntryKind.Error, evt.Text ?? "Process error."));
                     SetState(AgentSessionState.Error);
                     TurnEnded?.Invoke(this, false);
+                    if (!Backend.IsRunning)
+                        ReleaseReloadLease();
                     break;
 
                 case AgentEventKind.ProcessExited:
-                    CompleteLastAssistantEntry();
+                    CompleteLastStreamingEntry();
                     if (evt.IsError)
                     {
                         AddEntry(new TranscriptEntry(TranscriptEntryKind.Error, evt.Text ?? $"Exited with code {evt.ExitCode}."));
@@ -152,6 +183,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
                         SetState(AgentSessionState.WaitingInput);
                         TurnEnded?.Invoke(this, true);
                     }
+                    ReleaseReloadLease();
                     break;
 
                 case AgentEventKind.RawLine:
@@ -172,13 +204,13 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 "then send again — the conversation resumes where it left off."));
         }
 
-        private void AppendAssistantText(string text, bool isDelta)
+        private void AppendStreamingText(TranscriptEntryKind kind, string text, bool isDelta)
         {
             if (text.Length == 0)
                 return;
 
             var last = Transcript.Count > 0 ? Transcript[^1] : null;
-            if (last is { Kind: TranscriptEntryKind.Assistant, IsComplete: false })
+            if (last is { IsComplete: false } && last.Kind == kind)
             {
                 var separator = isDelta || last.Text.Length == 0 ? string.Empty : "\n\n";
                 last.Text += separator + text;
@@ -186,15 +218,22 @@ namespace Feeder.MCP.Editor.MatrixSpace
             }
             else
             {
-                AddEntry(new TranscriptEntry(TranscriptEntryKind.Assistant, text, isComplete: false));
+                // Switching block type (e.g. thinking → answer) settles the previous one.
+                CompleteLastStreamingEntry();
+                AddEntry(new TranscriptEntry(kind, text, isComplete: false));
             }
         }
 
-        private void CompleteLastAssistantEntry()
+        private void CompleteLastStreamingEntry()
         {
             var last = Transcript.Count > 0 ? Transcript[^1] : null;
-            if (last is { Kind: TranscriptEntryKind.Assistant, IsComplete: false })
+            if (last is { IsComplete: false } &&
+                last.Kind is TranscriptEntryKind.Assistant or TranscriptEntryKind.Thinking)
+            {
                 last.IsComplete = true;
+                last.CompletedAt = DateTime.Now;
+                Changed?.Invoke(this);
+            }
         }
 
         private void AddEntry(TranscriptEntry entry)
@@ -210,6 +249,32 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 return;
             State = newState;
             Changed?.Invoke(this);
+        }
+
+        private void ReleaseReloadLease()
+        {
+            var lease = _reloadLease;
+            _reloadLease = null;
+            lease?.Dispose();
+        }
+
+        internal void RestoreTotals(decimal costUsd, long inputTokens, long outputTokens,
+            long cacheReadTokens, long cacheCreationTokens)
+        {
+            TotalCostUsd = costUsd;
+            TotalInputTokens = inputTokens;
+            TotalOutputTokens = outputTokens;
+            TotalCacheReadTokens = cacheReadTokens;
+            TotalCacheCreationTokens = cacheCreationTokens;
+        }
+
+        internal void RestoreState(AgentSessionState state) => State = state;
+
+        internal void AddRestoredEntryOnce(TranscriptEntry entry)
+        {
+            if (Transcript.Count > 0 && Transcript[^1].Kind == entry.Kind && Transcript[^1].Text == entry.Text)
+                return;
+            Transcript.Add(entry);
         }
     }
 }

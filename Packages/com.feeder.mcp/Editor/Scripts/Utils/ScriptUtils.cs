@@ -4,6 +4,7 @@ using System.Linq;
 using Feeder.McpPlugin.Common.Model;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Feeder.MCP.Editor.MatrixSpace;
 using UnityEditor;
 using UnityEditor.Compilation;
 
@@ -102,6 +103,13 @@ namespace Feeder.MCP.Editor.Utils
                 keyList.Add(notificationKey);
                 SessionState.SetString(PendingNotificationKeysKey, string.Join(",", keyList));
             }
+
+            // LockReloadAssemblies also postpones compilation on Unity 2022.3. Waiting for a
+            // compilation callback here would deadlock the CLI that requested the script edit.
+            // Complete the tool request on the next editor update; compilation starts after the
+            // last Matrix Space process exits and releases its reload lease.
+            if (MatrixSpaceReloadCoordinator.IsDeferringCompilationCompletion)
+                ScheduleProcessPendingNotifications();
         }
 
         /// <summary>
@@ -140,11 +148,14 @@ namespace Feeder.MCP.Editor.Utils
                 var filePath = parts[1];
                 var operationType = parts[2];
 
-                // Check for compilation errors
-                var hasErrors = HasCompilationErrors();
-
                 ResponseCallTool response;
-                if (hasErrors)
+                if (MatrixSpaceReloadCoordinator.IsDeferringCompilationCompletion)
+                {
+                    var message = $"[Success] {operationType} saved: {filePath}. " +
+                                  "Unity compilation and assembly reload are deferred until all active Matrix Space agents finish.";
+                    response = ResponseCallTool.Success(message).SetRequestID(requestId);
+                }
+                else if (HasCompilationErrors())
                 {
                     var errorDetails = GetCompilationErrorDetails();
                     var message = $"[Warning] {operationType} completed: {filePath}, but compilation errors occurred. Details:\n{errorDetails}";

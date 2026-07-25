@@ -8,6 +8,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
     {
         User,
         Assistant,
+        Thinking,
         ToolUse,
         ToolResult,
         System,
@@ -25,6 +26,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public string? ToolName;
         public DateTime Timestamp = DateTime.Now;
         public bool IsComplete;
+
+        /// <summary>When a streaming entry settled; used for the "thought for Xs" header.</summary>
+        public DateTime? CompletedAt;
 
         public TranscriptEntry(TranscriptEntryKind kind, string text, string? toolName = null, bool isComplete = true)
         {

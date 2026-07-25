@@ -6,6 +6,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEditor;
 
 namespace Feeder.MCP.Editor.MatrixSpace
 {
@@ -17,7 +18,10 @@ namespace Feeder.MCP.Editor.MatrixSpace
     /// </summary>
     public static class UsageService
     {
-        private static readonly IUsageProvider[] Providers = { new ClaudeUsageProvider(), new CodexUsageProvider() };
+        // Providers are discovered instead of hard-coded so another AI CLI integration can
+        // add an IUsageProvider in its own assembly/package and immediately participate in
+        // the shared usage UI without modifying this service.
+        private static readonly IUsageProvider[] Providers = DiscoverProviders();
 
         /// <summary>Snapshots younger than this are not re-fetched (unless forced).</summary>
         private static readonly TimeSpan MinFetchInterval = TimeSpan.FromSeconds(30);
@@ -168,6 +172,30 @@ namespace Feeder.MCP.Editor.MatrixSpace
             {
                 // Cache write is best-effort.
             }
+        }
+
+        private static IUsageProvider[] DiscoverProviders()
+        {
+            var providers = new List<IUsageProvider>();
+            foreach (var type in TypeCache.GetTypesDerivedFrom<IUsageProvider>())
+            {
+                if (type.IsAbstract || type.IsInterface || type.GetConstructor(Type.EmptyTypes) == null)
+                    continue;
+
+                try
+                {
+                    if (Activator.CreateInstance(type) is IUsageProvider provider)
+                        providers.Add(provider);
+                }
+                catch (Exception)
+                {
+                    // One optional provider must not prevent usage for every other CLI.
+                }
+            }
+
+            providers.Sort((left, right) =>
+                AgentBackendCatalog.IndexOf(left.PresetId).CompareTo(AgentBackendCatalog.IndexOf(right.PresetId)));
+            return providers.ToArray();
         }
     }
 }

@@ -25,15 +25,27 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
         private readonly DropdownField _backendDropdown;
         private readonly DropdownField _modelDropdown;
+        private readonly DropdownField _modeDropdown;
+        private readonly DropdownField _effortDropdown;
         private readonly VisualElement _configRow;
         private readonly Label _configUsageLabel;
 
         private const float ConfigBackendDesignWidth = 118f;
         private const float ConfigModelDesignWidth = 92f;
+        private const float ConfigModeDesignWidth = 72f;
+        private const float ConfigEffortDesignWidth = 72f;
         private const float ConfigUsageMinWidth = 90f;
         private const float ConfigControlGap = 4f;
 
+        private static readonly System.Collections.Generic.List<string> ModeChoices = new() { "MANUAL", "PLAN", "AUTO" };
+        private static readonly System.Collections.Generic.List<string> EffortChoices =
+            new(MatrixSpaceSettings.EffortLevels);
+
         private readonly System.Collections.Generic.List<string> _backendChoices = new();
+        private readonly System.Collections.Generic.List<TranscriptEntryView> _entryViews = new();
+        private readonly Label _workingIndicator;
+        private IVisualElementScheduledItem? _workingAnimation;
+        private int _workingDotPhase;
 
         private AgentSession? _session;
         private int _renderedEntryCount;
@@ -48,6 +60,15 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
         /// <summary>Raised when the user picks a model ("default" = CLI default).</summary>
         public event Action<AgentPaneView, string>? ModelChangeRequested;
+
+        /// <summary>Raised when the user picks an agent mode ("manual"/"plan"/"auto").</summary>
+        public event Action<AgentPaneView, string>? ModeChangeRequested;
+
+        /// <summary>Raised when the user picks a reasoning effort ("default" = CLI default).</summary>
+        public event Action<AgentPaneView, string>? EffortChangeRequested;
+
+        /// <summary>Raised when the unsent prompt draft changes.</summary>
+        public event Action<AgentPaneView, string>? PromptDraftChanged;
 
         /// <summary>Raised when the user toggles the expand button; the grid owns the layout.</summary>
         public event Action<AgentPaneView>? ExpandToggleRequested;
@@ -74,6 +95,11 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             _stopButton = this.Q<Button>("stop-button");
             _configRow = this.Q<VisualElement>("pane-config-row");
             _configUsageLabel = this.Q<Label>("config-usage-label");
+
+            _workingIndicator = new Label();
+            _workingIndicator.AddToClassList("matrix-working-indicator");
+            _workingIndicator.style.display = DisplayStyle.None;
+            _transcriptContent.Add(_workingIndicator);
 
             foreach (var preset in AgentBackendCatalog.Presets)
                 _backendChoices.Add(preset.Label);
@@ -104,6 +130,36 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
                 ModelChangeRequested?.Invoke(this, evt.newValue);
                 ScheduleConfigRowLayout();
             });
+            _modeDropdown = new DropdownField(ModeChoices, IndexOfMode(MatrixSpaceSettings.DefaultAgentMode))
+            {
+                tooltip = "Agent mode. MANUAL: safe, Unity MCP tools only. PLAN: research and propose only. " +
+                          "AUTO: the agent edits files and runs commands directly.",
+            };
+            _modeDropdown.AddToClassList("agent-pane-mode");
+            _modeDropdown.AddToClassList("agent-pane-config-dropdown");
+            _modeDropdown.AddToClassList("agent-pane-config-control");
+            _modeDropdown.AddToClassList("styled-dropdown");
+            _modeDropdown.RegisterValueChangedCallback(evt =>
+            {
+                var index = ModeChoices.IndexOf(evt.newValue);
+                if (index >= 0)
+                    ModeChangeRequested?.Invoke(this, MatrixSpaceSettings.AgentModes[index]);
+            });
+            _effortDropdown = new DropdownField(EffortChoices, 0)
+            {
+                tooltip = "Reasoning effort. Higher = more thorough, slower and costlier. default = CLI default.",
+            };
+            _effortDropdown.AddToClassList("agent-pane-effort");
+            _effortDropdown.AddToClassList("agent-pane-config-dropdown");
+            _effortDropdown.AddToClassList("agent-pane-config-control");
+            _effortDropdown.AddToClassList("styled-dropdown");
+            _effortDropdown.RegisterValueChangedCallback(evt =>
+            {
+                EffortChangeRequested?.Invoke(this, evt.newValue);
+                ScheduleConfigRowLayout();
+            });
+            _configRow.Insert(0, _effortDropdown);
+            _configRow.Insert(0, _modeDropdown);
             _configRow.Insert(0, _modelDropdown);
             _configRow.Insert(0, _backendDropdown);
 
@@ -118,6 +174,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             // Enter sends, Shift+Enter inserts a newline. TrickleDown so the TextField
             // does not swallow the event first.
             _promptInput.RegisterCallback<KeyDownEvent>(OnPromptKeyDown, TrickleDown.TrickleDown);
+            _promptInput.RegisterValueChangedCallback(evt => PromptDraftChanged?.Invoke(this, evt.newValue ?? string.Empty));
 
             _configRow.RegisterCallback<GeometryChangedEvent>(_ => ScheduleConfigRowLayout());
             RegisterCallback<GeometryChangedEvent>(_ => ScheduleConfigRowLayout());
@@ -203,14 +260,20 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
             float padding = _configRow.resolvedStyle.paddingLeft + _configRow.resolvedStyle.paddingRight;
             bool modelVisible = _modelDropdown.resolvedStyle.display != DisplayStyle.None;
+            bool modeVisible = _modeDropdown.resolvedStyle.display != DisplayStyle.None;
+            bool effortVisible = _effortDropdown.resolvedStyle.display != DisplayStyle.None;
             float backendShare = ConfigBackendDesignWidth;
             float modelShare = modelVisible ? ConfigModelDesignWidth : 0f;
-            float gapCount = modelVisible ? 2f : 1f;
+            float modeShare = modeVisible ? ConfigModeDesignWidth : 0f;
+            float effortShare = effortVisible ? ConfigEffortDesignWidth : 0f;
+            float gapCount = 1f + (modelVisible ? 1f : 0f) + (modeVisible ? 1f : 0f) + (effortVisible ? 1f : 0f);
             float available = rowWidth - padding - ConfigControlGap * gapCount - ConfigUsageMinWidth;
-            float dropdownShare = backendShare + modelShare;
+            float dropdownShare = backendShare + modelShare + modeShare + effortShare;
 
             _backendDropdown.style.width = available * backendShare / dropdownShare;
             _modelDropdown.style.width = modelVisible ? available * modelShare / dropdownShare : 0f;
+            _modeDropdown.style.width = modeVisible ? available * modeShare / dropdownShare : 0f;
+            _effortDropdown.style.width = effortVisible ? available * effortShare / dropdownShare : 0f;
         }
 
         public void SetActive(bool active)
@@ -223,6 +286,11 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             RebuildBackendChoices();
             ApplySelectedBackendStatusClass();
             RefreshModelChoices(backendId);
+            var preset = AgentBackendCatalog.Get(backendId);
+            _modeDropdown.style.display =
+                AgentBackendCatalog.SupportsModes(preset) ? DisplayStyle.Flex : DisplayStyle.None;
+            _effortDropdown.style.display =
+                AgentBackendCatalog.SupportsEffort(preset) ? DisplayStyle.Flex : DisplayStyle.None;
             ScheduleConfigRowLayout();
             if (_session != null)
                 _nameLabel.text = BuildTitle(_session);
@@ -235,6 +303,26 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
                 _modelDropdown.choices.Add(value);
             _modelDropdown.SetValueWithoutNotify(value);
             ScheduleConfigRowLayout();
+        }
+
+        public void SetModeSelection(string? mode)
+        {
+            var index = IndexOfMode(string.IsNullOrEmpty(mode) ? MatrixSpaceSettings.DefaultAgentMode : mode!);
+            _modeDropdown.SetValueWithoutNotify(ModeChoices[index]);
+        }
+
+        public void SetEffortSelection(string? effort)
+        {
+            var value = string.IsNullOrEmpty(effort) ? MatrixSpaceSettings.DefaultEffort : effort!;
+            if (!EffortChoices.Contains(value))
+                value = MatrixSpaceSettings.DefaultEffort;
+            _effortDropdown.SetValueWithoutNotify(value);
+        }
+
+        private static int IndexOfMode(string mode)
+        {
+            var index = Array.IndexOf(MatrixSpaceSettings.AgentModes, mode);
+            return index >= 0 ? index : Array.IndexOf(MatrixSpaceSettings.AgentModes, MatrixSpaceSettings.DefaultAgentMode);
         }
 
         public void RefreshModelChoices(string backendId)
@@ -255,7 +343,9 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             session.Changed += OnSessionChanged;
 
             _transcriptContent.Clear();
+            _entryViews.Clear();
             _renderedEntryCount = 0;
+            _transcriptContent.Add(_workingIndicator);
             OnSessionChanged(session);
         }
 
@@ -266,18 +356,41 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             _session = null;
         }
 
+        public void SetPromptDraft(string? draft)
+            => _promptInput.SetValueWithoutNotify(draft ?? string.Empty);
+
         private void OnPromptKeyDown(KeyDownEvent evt)
         {
             if (evt.keyCode != UnityEngine.KeyCode.Return && evt.keyCode != UnityEngine.KeyCode.KeypadEnter)
-                return;
-            if (evt.shiftKey)
                 return;
 
             evt.StopImmediatePropagation();
 #if !UNITY_2023_2_OR_NEWER
             evt.PreventDefault();
 #endif
+
+            if (evt.shiftKey)
+            {
+                InsertPromptLineBreak();
+                return;
+            }
+
             SendCurrentPrompt();
+        }
+
+        private void InsertPromptLineBreak()
+        {
+            var prompt = _promptInput.value ?? string.Empty;
+            var cursorIndex = Mathf.Clamp(_promptInput.cursorIndex, 0, prompt.Length);
+            var selectIndex = Mathf.Clamp(_promptInput.selectIndex, 0, prompt.Length);
+            var selectionStart = Mathf.Min(cursorIndex, selectIndex);
+            var selectionEnd = Mathf.Max(cursorIndex, selectIndex);
+
+            _promptInput.value = prompt.Remove(selectionStart, selectionEnd - selectionStart)
+                .Insert(selectionStart, "\n");
+
+            var nextCursorIndex = selectionStart + 1;
+            _promptInput.SelectRange(nextCursorIndex, nextCursorIndex);
         }
 
         private void SendCurrentPrompt()
@@ -290,6 +403,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
                 return;
 
             _promptInput.SetValueWithoutNotify(string.Empty);
+            PromptDraftChanged?.Invoke(this, string.Empty);
             session.Send(prompt);
             _promptInput.Focus();
         }
@@ -309,6 +423,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             UpdateUsage(session);
 
             UpdateLed(session.State);
+            UpdateWorkingIndicator(session.State);
 
             var busy = session.State is AgentSessionState.Starting or AgentSessionState.Streaming;
             _sendButton.style.display = busy ? DisplayStyle.None : DisplayStyle.Flex;
@@ -316,6 +431,8 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             _promptInput.SetEnabled(session.State != AgentSessionState.Exited);
             _backendDropdown.SetEnabled(!busy);
             _modelDropdown.SetEnabled(!busy);
+            _modeDropdown.SetEnabled(!busy);
+            _effortDropdown.SetEnabled(!busy);
 
             SyncTranscript(session);
         }
@@ -333,22 +450,27 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
                 _ => string.Empty,
             };
 
-            var isClaude = AgentBackendCatalog.Get(session.BackendId).IsClaude;
-            if (!isClaude)
+            var preset = AgentBackendCatalog.Get(session.BackendId);
+            var reportsTurnUsage = preset.IsClaude || preset.IsCodex;
+            if (!reportsTurnUsage)
             {
                 _configUsageLabel.text = "usage n/a";
                 _configUsageLabel.EnableInClassList("agent-pane-usage-detail--na", true);
-                _configUsageLabel.tooltip = "Token reporting is only available for Claude Code.";
+                _configUsageLabel.tooltip = "This CLI does not expose per-turn token usage.";
                 _costLabel.tooltip = hasCost
                     ? "Accumulated API cost of this session."
-                    : "Token reporting is only available for Claude Code.";
+                    : "This CLI does not expose per-turn token usage.";
                 return;
             }
 
             _configUsageLabel.EnableInClassList("agent-pane-usage-detail--na", !hasTokens && !hasCost);
-            _configUsageLabel.text = hasTokens || hasCost
-                ? $"TOKENS ▲{FormatTokens(session.TotalInputTokens)} ▼{FormatTokens(session.TotalOutputTokens)} ⟳{FormatTokens(session.TotalCacheReadTokens)} · ${session.TotalCostUsd:F4}"
-                : "no usage yet";
+            _configUsageLabel.text = (hasTokens, hasCost) switch
+            {
+                (true, true) => $"TOKENS ▲{FormatTokens(session.TotalInputTokens)} ▼{FormatTokens(session.TotalOutputTokens)} ⟳{FormatTokens(session.TotalCacheReadTokens)} · ${session.TotalCostUsd:F4}",
+                (true, false) => $"TOKENS ▲{FormatTokens(session.TotalInputTokens)} ▼{FormatTokens(session.TotalOutputTokens)} ⟳{FormatTokens(session.TotalCacheReadTokens)}",
+                (false, true) => $"${session.TotalCostUsd:F4}",
+                _ => "no usage yet",
+            };
 
             var breakdown =
                 "Session usage\n" +
@@ -377,18 +499,51 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
 
             // Append missing entries…
             for (var i = _renderedEntryCount; i < session.Transcript.Count; i++)
-                _transcriptContent.Add(new TranscriptEntryView(session.Transcript[i]));
-            _renderedEntryCount = session.Transcript.Count;
-
-            // …and refresh the last one (streaming assistant text mutates in place).
-            if (_transcriptContent.childCount > 0 &&
-                _transcriptContent[_transcriptContent.childCount - 1] is TranscriptEntryView lastView)
             {
-                lastView.Refresh();
+                var view = new TranscriptEntryView(session.Transcript[i]);
+                _entryViews.Add(view);
+                _transcriptContent.Add(view);
+            }
+            _renderedEntryCount = session.Transcript.Count;
+            _workingIndicator.BringToFront();
+
+            // …and refresh every view that has not settled yet (streaming entries mutate
+            // in place, and a thinking view collapses once its entry completes).
+            foreach (var view in _entryViews)
+            {
+                if (!view.IsSettled)
+                    view.Refresh();
             }
 
             if (wasAtBottom)
                 _transcriptScroll.schedule.Execute(ScrollToBottom);
+        }
+
+        private void UpdateWorkingIndicator(AgentSessionState state)
+        {
+            var busy = state is AgentSessionState.Starting or AgentSessionState.Streaming;
+            _workingIndicator.style.display = busy ? DisplayStyle.Flex : DisplayStyle.None;
+
+            if (busy)
+            {
+                _workingAnimation ??= _workingIndicator.schedule.Execute(AnimateWorkingIndicator).Every(400);
+                AnimateWorkingIndicator();
+            }
+            else if (_workingAnimation != null)
+            {
+                _workingAnimation.Pause();
+                _workingAnimation = null;
+                _statusLed.style.opacity = 1f;
+            }
+        }
+
+        private void AnimateWorkingIndicator()
+        {
+            _workingDotPhase = (_workingDotPhase + 1) % 4;
+            var label = _session?.State == AgentSessionState.Starting ? "ESTABLISHING LINK" : "PROCESSING";
+            _workingIndicator.text = "▍ " + label + new string('.', _workingDotPhase);
+            // Pulse the header LED in the same tick — UI Toolkit has no USS keyframes.
+            _statusLed.style.opacity = _workingDotPhase % 2 == 0 ? 1f : 0.35f;
         }
 
         private bool IsScrolledToBottom()

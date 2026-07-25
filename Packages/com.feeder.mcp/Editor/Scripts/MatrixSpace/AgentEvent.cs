@@ -7,8 +7,11 @@ namespace Feeder.MCP.Editor.MatrixSpace
         /// <summary>First event of a turn: system/init. Carries the session id.</summary>
         SystemInit,
 
-        /// <summary>A completed assistant text block.</summary>
+        /// <summary>A completed assistant text block, or a streamed text delta.</summary>
         AssistantText,
+
+        /// <summary>A streamed thinking (reasoning) delta or completed thinking block.</summary>
+        AssistantThinking,
 
         /// <summary>The assistant invoked a tool.</summary>
         ToolUse,

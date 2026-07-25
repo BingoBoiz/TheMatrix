@@ -15,7 +15,18 @@ namespace Feeder.MCP.Editor.MatrixSpace
     {
         private const int ToolResultPreviewMaxChars = 200;
 
-        public static List<AgentEvent> ParseLine(string line)
+        /// <summary>
+        /// Per-turn parser state. With `--include-partial-messages` the CLI streams token
+        /// deltas AND still emits the assembled assistant message afterwards; this tracks
+        /// whether the current message was already streamed so the full message is not
+        /// appended a second time.
+        /// </summary>
+        public sealed class State
+        {
+            public bool SawDeltaForCurrentMessage;
+        }
+
+        public static List<AgentEvent> ParseLine(string line, State? state = null)
         {
             var events = new List<AgentEvent>();
             if (string.IsNullOrWhiteSpace(line))
@@ -48,7 +59,10 @@ namespace Feeder.MCP.Editor.MatrixSpace
                         ParseSystem(root, events, line);
                         break;
                     case "assistant":
-                        ParseAssistant(root, events);
+                        ParseAssistant(root, events, state);
+                        break;
+                    case "stream_event":
+                        ParseStreamEvent(root, events, state);
                         break;
                     case "user":
                         ParseUser(root, events);
@@ -82,10 +96,14 @@ namespace Feeder.MCP.Editor.MatrixSpace
             }
         }
 
-        private static void ParseAssistant(JsonElement root, List<AgentEvent> events)
+        private static void ParseAssistant(JsonElement root, List<AgentEvent> events, State? state)
         {
             if (!TryGetContent(root, out var content))
                 return;
+
+            // Already delivered token-by-token via stream_events for this message; the
+            // assembled message would duplicate everything.
+            var streamed = state?.SawDeltaForCurrentMessage == true;
 
             foreach (var block in content.EnumerateArray())
             {
@@ -93,16 +111,91 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 {
                     case "text":
                         var text = GetString(block, "text");
-                        if (!string.IsNullOrEmpty(text))
+                        if (!streamed && !string.IsNullOrEmpty(text))
                             events.Add(new AgentEvent(AgentEventKind.AssistantText) { Text = text });
                         break;
+                    case "thinking":
+                        var thinking = GetString(block, "thinking");
+                        if (!streamed && !string.IsNullOrEmpty(thinking))
+                            events.Add(new AgentEvent(AgentEventKind.AssistantThinking) { Text = thinking });
+                        break;
                     case "tool_use":
+                        if (!streamed)
+                        {
+                            events.Add(new AgentEvent(AgentEventKind.ToolUse)
+                            {
+                                ToolName = GetString(block, "name"),
+                            });
+                        }
+                        break;
+                }
+            }
+        }
+
+        private static void ParseStreamEvent(JsonElement root, List<AgentEvent> events, State? state)
+        {
+            if (!root.TryGetProperty("event", out var evt) || evt.ValueKind != JsonValueKind.Object)
+                return;
+
+            switch (GetString(evt, "type"))
+            {
+                case "message_start":
+                    if (state != null)
+                        state.SawDeltaForCurrentMessage = false;
+                    break;
+
+                case "content_block_start":
+                    // Surface tool activity the moment the block starts instead of
+                    // waiting for the assembled assistant message.
+                    if (evt.TryGetProperty("content_block", out var block) &&
+                        block.ValueKind == JsonValueKind.Object &&
+                        GetString(block, "type") == "tool_use")
+                    {
+                        if (state != null)
+                            state.SawDeltaForCurrentMessage = true;
                         events.Add(new AgentEvent(AgentEventKind.ToolUse)
                         {
                             ToolName = GetString(block, "name"),
                         });
+                    }
+                    break;
+
+                case "content_block_delta":
+                    if (!evt.TryGetProperty("delta", out var delta) ||
+                        delta.ValueKind != JsonValueKind.Object)
+                    {
                         break;
-                }
+                    }
+                    switch (GetString(delta, "type"))
+                    {
+                        case "text_delta":
+                            var text = GetString(delta, "text");
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                if (state != null)
+                                    state.SawDeltaForCurrentMessage = true;
+                                events.Add(new AgentEvent(AgentEventKind.AssistantText)
+                                {
+                                    Text = text,
+                                    IsDelta = true,
+                                });
+                            }
+                            break;
+                        case "thinking_delta":
+                            var thinking = GetString(delta, "thinking");
+                            if (!string.IsNullOrEmpty(thinking))
+                            {
+                                if (state != null)
+                                    state.SawDeltaForCurrentMessage = true;
+                                events.Add(new AgentEvent(AgentEventKind.AssistantThinking)
+                                {
+                                    Text = thinking,
+                                    IsDelta = true,
+                                });
+                            }
+                            break;
+                    }
+                    break;
             }
         }
 
@@ -134,6 +227,22 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 SessionId = GetString(root, "session_id"),
                 Text = GetString(root, "result"),
             };
+
+            // Failed turns often carry the real reason only in an "errors" array
+            // (e.g. "No conversation found with session ID: …").
+            if (string.IsNullOrEmpty(evt.Text) &&
+                root.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Array)
+            {
+                var parts = new List<string>();
+                foreach (var err in errors.EnumerateArray())
+                {
+                    if (err.ValueKind == JsonValueKind.String && !string.IsNullOrEmpty(err.GetString()))
+                        parts.Add(err.GetString()!);
+                }
+                if (parts.Count > 0)
+                    evt.Text = string.Join("\n", parts);
+            }
 
             if (root.TryGetProperty("is_error", out var isErrProp))
                 evt.IsError = isErrProp.ValueKind == JsonValueKind.True;

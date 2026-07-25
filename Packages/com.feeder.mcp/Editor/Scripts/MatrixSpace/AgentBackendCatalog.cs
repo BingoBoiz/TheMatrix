@@ -20,6 +20,14 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public string DefaultArguments = string.Empty;
         /// <summary>How to pass a model id, e.g. "-m {model}". Empty = unsupported.</summary>
         public string ModelArgTemplate = string.Empty;
+        /// <summary>Args substituted for "{mode}" per agent mode. All empty = mode unsupported.</summary>
+        public string ModeArgManual = string.Empty;
+        public string ModeArgPlan = string.Empty;
+        public string ModeArgAuto = string.Empty;
+        /// <summary>How to pass reasoning effort, e.g. "-c model_reasoning_effort={effort}". Empty = unsupported.</summary>
+        public string EffortArgTemplate = string.Empty;
+        /// <summary>CLI supports "exec resume &lt;session-id&gt;" to keep conversation context.</summary>
+        public bool SupportsExecResume;
         /// <summary>Comma-separated offline fallback models; "default" means no --model flag.</summary>
         public string DefaultModels = "default";
         /// <summary>models.dev provider key ("anthropic", "openai", ...); null = no dynamic catalog.</summary>
@@ -30,6 +38,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public string ModelExcludePattern = string.Empty;
         /// <summary>Claude gets the full stream-json backend; everything else runs generic.</summary>
         public bool IsClaude;
+        /// <summary>Codex gets its native JSONL backend instead of plain stdout handling.</summary>
+        public bool IsCodex;
         /// <summary>Install page opened by the INSTALL button.</summary>
         public string InstallUrl = string.Empty;
         /// <summary>Arguments passed when opening a login terminal (empty = just run the CLI).</summary>
@@ -65,9 +75,18 @@ namespace Feeder.MCP.Editor.MatrixSpace
             {
                 Id = "codex",
                 Label = "Codex (ChatGPT)",
+                IsCodex = true,
                 DefaultExecutable = "codex",
-                DefaultArguments = "exec --skip-git-repo-check {model} {prompt}",
+                DefaultArguments = "exec --json --skip-git-repo-check {mode} {effort} {model} {prompt}",
                 ModelArgTemplate = "-m {model}",
+                // codex exec defaults to a read-only sandbox; workspace-write is what lets
+                // "auto" actually edit files. The -c form (not --sandbox) is used because
+                // "exec resume" only accepts config overrides.
+                ModeArgManual = "-c sandbox_mode=\"read-only\"",
+                ModeArgPlan = "-c sandbox_mode=\"read-only\"",
+                ModeArgAuto = "-c sandbox_mode=\"workspace-write\"",
+                EffortArgTemplate = "-c model_reasoning_effort=\"{effort}\"",
+                SupportsExecResume = true,
                 DefaultModels = "default,gpt-5.2-codex,gpt-5.1-codex-max",
                 ModelsDevProviderId = "openai",
                 // Codex is a coding CLI: hide realtime/voice/image/embedding endpoints,
@@ -76,7 +95,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 InstallUrl = "https://developers.openai.com/codex/cli",
                 LoginArgs = "login",
                 LoginHint = "Completes ChatGPT sign-in in your browser.",
-                Note = "OpenAI Codex CLI. Each turn is stateless.",
+                Note = "OpenAI Codex CLI. Conversations resume via 'codex exec resume'.",
             },
             new()
             {
@@ -262,6 +281,41 @@ namespace Feeder.MCP.Editor.MatrixSpace
             return preset.ModelArgTemplate.Replace("{model}", model!.Trim());
         }
 
+        /// <summary>True when the mode dropdown (Manual/Plan/Auto) has any effect for this preset.</summary>
+        public static bool SupportsModes(AgentBackendPreset preset)
+            => preset.IsClaude
+               || preset.ModeArgManual.Length > 0 || preset.ModeArgPlan.Length > 0 || preset.ModeArgAuto.Length > 0;
+
+        /// <summary>True when the effort dropdown has any effect for this preset.</summary>
+        public static bool SupportsEffort(AgentBackendPreset preset)
+            => preset.IsClaude || preset.EffortArgTemplate.Length > 0;
+
+        /// <summary>Renders the "{mode}" substitution (e.g. "--sandbox workspace-write"), or "".</summary>
+        public static string RenderModeArg(AgentBackendPreset preset, string? mode)
+        {
+            var effective = string.IsNullOrWhiteSpace(mode) ? MatrixSpaceSettings.DefaultAgentMode : mode!;
+            return effective switch
+            {
+                "plan" => preset.ModeArgPlan,
+                "auto" => preset.ModeArgAuto,
+                _ => preset.ModeArgManual,
+            };
+        }
+
+        /// <summary>Renders the "{effort}" substitution, or "" for default/unsupported.</summary>
+        public static string RenderEffortArg(AgentBackendPreset preset, string? effort, string? model)
+        {
+            if (string.IsNullOrWhiteSpace(effort) || effort == "default" || preset.EffortArgTemplate.Length == 0)
+                return string.Empty;
+
+            var level = effort!.Trim();
+            // Codex has no "max"; xhigh only exists on the codex-max family.
+            if (level == "max" && !preset.IsClaude)
+                level = model != null && model.Contains("max") ? "xhigh" : "high";
+
+            return preset.EffortArgTemplate.Replace("{effort}", level);
+        }
+
         /// <summary>Resolved executable path for this preset (user setting or default), or null.</summary>
         public static string? ResolveExecutablePath(AgentBackendPreset preset)
         {
@@ -274,9 +328,11 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public static IAgentBackend Create(string? backendId)
         {
             var preset = Get(backendId);
-            return preset.IsClaude
-                ? new ClaudeCliBackend()
-                : new GenericCliBackend(preset);
+            if (preset.IsClaude)
+                return new ClaudeCliBackend();
+            if (preset.IsCodex)
+                return new CodexCliBackend(preset);
+            return new GenericCliBackend(preset);
         }
     }
 }

@@ -5,6 +5,7 @@ using Feeder.McpPlugin;
 using Feeder.McpPlugin.Common.Model;
 using Feeder.ReflectorNet.Utils;
 using Feeder.MCP.Editor.Utils;
+using Feeder.MCP.Editor.MatrixSpace;
 using UnityEditor;
 
 namespace Feeder.MCP.Editor.API
@@ -50,6 +51,13 @@ namespace Feeder.MCP.Editor.API
             return await MainThread.Instance.RunAsync<ResponseCallTool>(() =>
             {
                 AssetDatabase.Refresh(options ?? ImportAssetOptions.ForceSynchronousImport);
+
+                if (MatrixSpaceReloadCoordinator.IsDeferringCompilationCompletion)
+                {
+                    return ResponseCallTool.Success(
+                        "AssetDatabase refresh requested. Unity compilation and assembly reload are deferred " +
+                        "until all active Matrix Space agents finish.").SetRequestID(requestId);
+                }
 
                 if (EditorApplication.isCompiling)
                 {

@@ -81,6 +81,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
         public bool IsRunning => _process != null;
         public string? SessionId { get; set; }
         public string? ModelOverride { get; set; }
+        public string? ModeOverride { get; set; }
+        public string? EffortOverride { get; set; }
         public string? AgentLabel { get; set; }
 
         public event Action<AgentEvent>? EventReceived;
@@ -97,6 +99,11 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         /// <summary>Main-thread hook invoked for every event before listeners see it.</summary>
         protected virtual void OnMainThreadEvent(AgentEvent evt)
+        {
+        }
+
+        /// <summary>Called for each stderr line (off the main thread; must be pure).</summary>
+        protected virtual void OnStderrLineReceived(string line)
         {
         }
 
@@ -248,6 +255,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
         {
             if (string.IsNullOrWhiteSpace(e.Data))
                 return;
+
+            OnStderrLineReceived(e.Data);
 
             lock (_stderrTail)
             {

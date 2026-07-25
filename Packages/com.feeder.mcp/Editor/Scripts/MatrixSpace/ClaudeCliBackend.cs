@@ -12,6 +12,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
     public sealed class ClaudeCliBackend : CliBackendBase
     {
         private bool _sawResultThisTurn;
+        private ClaudeStreamJsonParser.State _parserState = new();
 
         public override string Name => "Claude Code";
 
@@ -30,6 +31,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
             var preset = AgentBackendCatalog.Get("claude");
             _sawResultThisTurn = false;
+            _parserState = new ClaudeStreamJsonParser.State();
             StartTurnProcess(
                 launchInfo.FileName,
                 launchInfo.BuildArguments(BuildToolArguments()),
@@ -38,7 +40,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
         }
 
         protected override IEnumerable<AgentEvent> ParseStdoutLine(string line)
-            => ClaudeStreamJsonParser.ParseLine(line);
+            => ClaudeStreamJsonParser.ParseLine(line, _parserState);
 
         protected override void OnMainThreadEvent(AgentEvent evt)
         {
@@ -68,7 +70,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         private string BuildToolArguments()
         {
-            var args = new StringBuilder("-p --output-format stream-json --verbose");
+            var args = new StringBuilder("-p --output-format stream-json --include-partial-messages --verbose");
 
             var model = ModelOverride;
             if (string.IsNullOrWhiteSpace(model) || model == "default")
@@ -76,19 +78,37 @@ namespace Feeder.MCP.Editor.MatrixSpace
             if (!string.IsNullOrWhiteSpace(model) && model != "default")
                 args.Append(" --model ").Append(model.Trim());
 
+            var mode = string.IsNullOrWhiteSpace(ModeOverride) ? MatrixSpaceSettings.DefaultAgentMode : ModeOverride!;
             if (MatrixSpaceSettings.SkipAllPermissions.Value)
             {
                 args.Append(" --dangerously-skip-permissions");
             }
+            else if (mode == "auto")
+            {
+                // Headless -p auto-denies any tool needing approval, so "auto" must bypass
+                // to let the agent actually edit files and run commands.
+                args.Append(" --permission-mode bypassPermissions");
+            }
             else
             {
-                var permissionMode = MatrixSpaceSettings.PermissionMode.Value;
-                if (!string.IsNullOrWhiteSpace(permissionMode) && permissionMode != "default")
-                    args.Append(" --permission-mode ").Append(permissionMode.Trim());
+                if (mode == "plan")
+                {
+                    args.Append(" --permission-mode plan");
+                }
+                else
+                {
+                    var permissionMode = MatrixSpaceSettings.PermissionMode.Value;
+                    if (!string.IsNullOrWhiteSpace(permissionMode) && permissionMode != "default")
+                        args.Append(" --permission-mode ").Append(permissionMode.Trim());
+                }
 
                 if (MatrixSpaceSettings.AllowFeederMcpTools.Value)
                     args.Append(" --allowedTools \"").Append(MatrixSpaceSettings.FeederMcpAllowedTools).Append('"');
             }
+
+            var effort = EffortOverride;
+            if (!string.IsNullOrWhiteSpace(effort) && effort != "default")
+                args.Append(" --effort ").Append(effort!.Trim());
 
             if (SessionId != null)
             {
@@ -100,6 +120,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 var systemParts = new List<string>();
                 if (MatrixSpaceSettings.MatrixPersona.Value)
                     systemParts.Add(MatrixSpaceSettings.MatrixPersonaSystemPrompt);
+                if (mode != "plan")
+                    systemParts.Add(MatrixSpaceSettings.CodingAgentPrompt);
                 if (MatrixSpaceSettings.SharedMemory.Value)
                     systemParts.Add(MatrixSpaceSettings.BuildSharedMemoryPrompt(AgentLabel ?? "AGENT"));
 

@@ -175,6 +175,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             Add(_bottomBar);
 
             schedule.Execute(UpdateTimerAndCounts).Every(1000);
+            RegisterCallback<DetachFromPanelEvent>(_ => UnbindCards());
 
             RefreshFromState();
         }
@@ -217,6 +218,8 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             LayoutNodes();
             UpdateTimerAndCounts();
         }
+
+        public void UnbindSessions() => UnbindCards();
 
         private NodeCard BuildNodeCard(
             MatrixSpaceSessionStore.RoleAssignment assignment,

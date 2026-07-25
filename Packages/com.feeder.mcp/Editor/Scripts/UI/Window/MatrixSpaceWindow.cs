@@ -1,5 +1,6 @@
 #nullable enable
 
+using System;
 using System.Collections.Generic;
 using Feeder.MCP.Editor.MatrixSpace;
 using Feeder.MCP.Editor.MatrixSpace.Setup;
@@ -43,6 +44,7 @@ namespace Feeder.MCP.Editor.UI
         private MatrixSpaceViewRouter? _router;
         private SidebarView? _sidebar;
         private Label? _breadcrumb;
+        private Label? _reloadStatus;
 
         private ToastLayer? _toasts;
         private MatrixRainRenderer? _matrixRain;
@@ -68,6 +70,32 @@ namespace Feeder.MCP.Editor.UI
             ModelCatalogService.EnsureLoaded();
             ModelCatalogService.Updated -= RefreshAllModelDropdowns;
             ModelCatalogService.Updated += RefreshAllModelDropdowns;
+            MatrixSpaceReloadCoordinator.StateChanged -= OnReloadStateChanged;
+            MatrixSpaceReloadCoordinator.StateChanged += OnReloadStateChanged;
+            MatrixSpaceSessionStore.instance.MigrateIfNeeded();
+        }
+
+        private void OnDisable()
+        {
+            ModelCatalogService.Updated -= RefreshAllModelDropdowns;
+            MatrixSpaceReloadCoordinator.StateChanged -= OnReloadStateChanged;
+            CaptureAllSessions();
+            MatrixSpaceSessionStore.instance.PersistNow();
+        }
+
+        public override void CreateGUI()
+        {
+            TearDownUiBindings();
+            try
+            {
+                base.CreateGUI();
+                if (rootVisualElement.childCount == 0)
+                    throw new InvalidOperationException("Matrix Space UI was created without any root elements.");
+            }
+            catch (Exception ex)
+            {
+                ShowRecoveryPanel(ex);
+            }
         }
 
         protected override void OnGUICreated(VisualElement root)
@@ -76,7 +104,7 @@ namespace Feeder.MCP.Editor.UI
 
             _paneTemplate = EditorAssetLoader.LoadAssetAtPath<VisualTreeAsset>(_paneUxmlPaths, Logger);
             if (_paneTemplate == null)
-                return;
+                throw new InvalidOperationException("AgentPane.uxml could not be loaded.");
 
             if (MatrixSpaceSettings.RainBackground.Value)
                 SetupMatrixRain(root);
@@ -152,6 +180,7 @@ namespace Feeder.MCP.Editor.UI
             _router.ViewChanged += view =>
             {
                 MatrixSpaceSessionStore.instance.ActiveViewIndex = (int)view;
+                MatrixSpaceSessionStore.instance.SchedulePersist();
                 _sidebar.SetSelected(view);
                 if (_breadcrumb != null)
                     _breadcrumb.text = $"matrix › {view.ToString().ToLowerInvariant()}";
@@ -187,10 +216,16 @@ namespace Feeder.MCP.Editor.UI
             pane.ResetRequested += OnPaneResetRequested;
             pane.BackendChangeRequested += OnPaneBackendChangeRequested;
             pane.ModelChangeRequested += OnPaneModelChangeRequested;
+            pane.ModeChangeRequested += OnPaneModeChangeRequested;
+            pane.EffortChangeRequested += OnPaneEffortChangeRequested;
+            pane.PromptDraftChanged += OnPromptDraftChanged;
             pane.ExpandToggleRequested += p => _grid?.ToggleExpanded(p);
             pane.Focused += OnPaneFocused;
             pane.SetBackendSelection(record.BackendId);
             pane.SetModelSelection(record.ModelId);
+            pane.SetModeSelection(record.ModeId);
+            pane.SetEffortSelection(record.EffortId);
+            pane.SetPromptDraft(record.PromptDraft);
             pane.Bind(GetOrCreateSession(record));
             return pane;
         }
@@ -211,23 +246,16 @@ namespace Feeder.MCP.Editor.UI
             var backend = AgentBackendCatalog.Create(record.BackendId);
             backend.SessionId = record.BackendSessionId;
             backend.ModelOverride = record.ModelId;
-            var session = new AgentSession(record.PaneId, record.DisplayName, backend, record.BackendId);
-
-            if (record.BackendSessionId != null)
-            {
-                session.Transcript.Add(new TranscriptEntry(TranscriptEntryKind.System,
-                    "Matrix reloaded — a new iteration. Conversation context is preserved."));
-            }
+            backend.ModeOverride = record.ModeId;
+            backend.EffortOverride = record.EffortId;
+            var session = new AgentSession(record.PaneId, record.DisplayName, backend, record.BackendId, record);
 
             // Keep the store in sync so a domain reload can resume this conversation.
-            session.Changed += s =>
-            {
-                if (s.Backend.SessionId != record.BackendSessionId)
-                    record.BackendSessionId = s.Backend.SessionId;
-            };
+            session.Changed += s => MatrixSpaceSessionStore.instance.CaptureSession(record, s);
             session.TurnEnded += OnTurnEnded;
 
             _sessions[record.PaneId] = session;
+            MatrixSpaceSessionStore.instance.CaptureSession(record, session);
             return session;
         }
 
@@ -248,6 +276,50 @@ namespace Feeder.MCP.Editor.UI
             if (index >= 0)
                 store.Panes[index].ModelId = model;
             session.Backend.ModelOverride = model;
+            store.SchedulePersist();
+        }
+
+        private void OnPaneModeChangeRequested(AgentPaneView pane, string mode)
+        {
+            var session = pane.Session;
+            if (session == null)
+                return;
+
+            var store = MatrixSpaceSessionStore.instance;
+            var index = store.Panes.FindIndex(p => p.PaneId == session.PaneId);
+            if (index >= 0)
+                store.Panes[index].ModeId = mode;
+            session.Backend.ModeOverride = mode;
+            store.SchedulePersist();
+        }
+
+        private void OnPaneEffortChangeRequested(AgentPaneView pane, string effort)
+        {
+            var session = pane.Session;
+            if (session == null)
+                return;
+
+            var store = MatrixSpaceSessionStore.instance;
+            var index = store.Panes.FindIndex(p => p.PaneId == session.PaneId);
+            if (index >= 0)
+                store.Panes[index].EffortId = effort;
+            session.Backend.EffortOverride = effort;
+            store.SchedulePersist();
+        }
+
+        private void OnPromptDraftChanged(AgentPaneView pane, string promptDraft)
+        {
+            var session = pane.Session;
+            if (session == null)
+                return;
+
+            var store = MatrixSpaceSessionStore.instance;
+            var record = store.Panes.Find(p => p.PaneId == session.PaneId);
+            if (record == null)
+                return;
+
+            record.PromptDraft = promptDraft;
+            store.SchedulePersist();
         }
 
         private void RestartPane(AgentPaneView pane, bool keepBackend, string? newBackendId)
@@ -270,8 +342,12 @@ namespace Feeder.MCP.Editor.UI
             store.ResetPane(index);
             var record = store.GetOrCreatePane(index);
             record.BackendId = backendId;
+            store.SchedulePersist();
             pane.SetBackendSelection(backendId);
             pane.SetModelSelection(record.ModelId);
+            pane.SetModeSelection(record.ModeId);
+            pane.SetEffortSelection(record.EffortId);
+            pane.SetPromptDraft(record.PromptDraft);
             pane.Bind(GetOrCreateSession(record));
         }
 
@@ -348,6 +424,9 @@ namespace Feeder.MCP.Editor.UI
                 _board?.Refresh();
                 UpdateSidebarBadges();
             }
+
+            CaptureSession(session);
+            MatrixSpaceSessionStore.instance.PersistNow();
         }
 
         private List<(string PaneId, string Label, bool CanSend)> GetPaneTargets()
@@ -379,6 +458,7 @@ namespace Feeder.MCP.Editor.UI
             _presetControl.RegisterCallback<ChangeEvent<int>>(evt =>
             {
                 MatrixSpaceSessionStore.instance.GridPresetIndex = evt.newValue;
+                MatrixSpaceSessionStore.instance.SchedulePersist();
                 _grid?.ApplyPreset(evt.newValue);
                 UpdateSidebarBadges();
             });
@@ -389,6 +469,10 @@ namespace Feeder.MCP.Editor.UI
             root.Q<VisualElement>("usage-slot")?.Add(usageChip);
 
             root.Q<VisualElement>("mcp-clients-slot")?.Add(new McpClientsIndicatorView());
+
+            _reloadStatus = root.Q<Label>("reload-status");
+            OnReloadStateChanged(MatrixSpaceReloadCoordinator.ActiveTurnCount,
+                MatrixSpaceReloadCoordinator.ReloadPending);
 
             root.Q<Button>("kill-all-button").clicked += () =>
             {
@@ -545,6 +629,8 @@ namespace Feeder.MCP.Editor.UI
                 });
                 target.Send(SwarmMission.BuildPrompt(role, mission, roles, target.DisplayName));
             }
+
+            MatrixSpaceSessionStore.instance.SchedulePersist();
         }
 
         // ── Matrix rain background ───────────────────────────────────────
@@ -599,9 +685,106 @@ namespace Feeder.MCP.Editor.UI
 
         // ── Lifecycle ────────────────────────────────────────────────────
 
+        private void CaptureSession(AgentSession session)
+        {
+            var store = MatrixSpaceSessionStore.instance;
+            var record = store.Panes.Find(p => p.PaneId == session.PaneId);
+            if (record != null)
+                store.CaptureSession(record, session);
+        }
+
+        private void CaptureAllSessions()
+        {
+            foreach (var session in _sessions.Values)
+                CaptureSession(session);
+        }
+
+        /// <summary>
+        /// UI Toolkit can call CreateGUI repeatedly without destroying the EditorWindow.
+        /// Remove view subscriptions while deliberately retaining the live sessions.
+        /// </summary>
+        private void TearDownUiBindings()
+        {
+            if (_grid != null)
+            {
+                foreach (var pane in _grid.Panes)
+                    pane.Unbind();
+            }
+
+            _swarmBoard?.UnbindSessions();
+            _grid = null;
+            _paneTemplate = null;
+            _presetControl = null;
+            _board = null;
+            _memoryPanel = null;
+            _swarmBoard = null;
+            _usageView = null;
+            _router = null;
+            _sidebar = null;
+            _breadcrumb = null;
+            _reloadStatus = null;
+            _toasts = null;
+        }
+
+        private void ShowRecoveryPanel(Exception exception)
+        {
+            Debug.LogException(exception);
+            var root = rootVisualElement;
+            root.Clear();
+            root.style.backgroundColor = MatrixWindowBackground;
+            ApplyStyleSheets(root);
+
+            var panel = new VisualElement { name = "matrix-recovery-panel" };
+            panel.style.flexGrow = 1;
+            panel.style.justifyContent = Justify.Center;
+            panel.style.alignItems = Align.Center;
+            panel.style.paddingLeft = 32;
+            panel.style.paddingRight = 32;
+
+            var title = new Label("MATRIX SPACE RECOVERY");
+            title.style.fontSize = 18;
+            title.style.unityFontStyleAndWeight = FontStyle.Bold;
+            title.style.color = new Color(0.2f, 1f, 0.45f);
+            panel.Add(title);
+
+            var message = new Label($"The interface could not be rebuilt. Your sessions were preserved.\n\n{exception.Message}");
+            message.style.whiteSpace = WhiteSpace.Normal;
+            message.style.maxWidth = 720;
+            message.style.marginTop = 12;
+            message.style.marginBottom = 18;
+            panel.Add(message);
+
+            var retry = new Button(CreateGUI) { text = "RETRY UI" };
+            retry.AddToClassList("btn-primary");
+            panel.Add(retry);
+            root.Add(panel);
+        }
+
+        private void OnReloadStateChanged(int activeTurns, bool reloadPending)
+        {
+            if (_reloadStatus == null)
+                return;
+
+            var visible = activeTurns > 0 || reloadPending;
+            _reloadStatus.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!visible)
+                return;
+
+            var noun = activeTurns == 1 ? "AGENT" : "AGENTS";
+            _reloadStatus.text = $"RELOAD DEFERRED · {activeTurns} {noun}";
+            _reloadStatus.tooltip = reloadPending
+                ? "Compilation succeeded. Unity will reload after every active agent process exits."
+                : "Assembly reload is locked while active Matrix Space turns finish.";
+        }
+
         private void OnDestroy()
         {
             ModelCatalogService.Updated -= RefreshAllModelDropdowns;
+            MatrixSpaceReloadCoordinator.StateChanged -= OnReloadStateChanged;
+            CaptureAllSessions();
+            MatrixSpaceSessionStore.instance.PersistNow();
+            TearDownUiBindings();
+
             foreach (var session in _sessions.Values)
                 session.Dispose();
             _sessions.Clear();
