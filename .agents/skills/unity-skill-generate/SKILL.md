@@ -9,7 +9,7 @@ Generate all skills from the existed Tools in the Unity Project.
 
 ## Inputs
 
-- `path` (optional) — project-relative skills folder (e.g. `.Codex/skills`). Absolute paths and `..` traversal segments are rejected. When null/empty, the editor's configured `SkillsRootFolderAbsolutePath` is used.
+- `path` (optional) — project-relative skills folder (e.g. `.claude/skills`). Absolute paths and `..` traversal segments are rejected. When null/empty, the editor's configured `SkillsRootFolderAbsolutePath` is used.
 
 ## Behavior
 
@@ -22,7 +22,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "path": "string_value"
+  "path": "value"
 }
 ```
 

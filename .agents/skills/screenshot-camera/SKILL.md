@@ -23,7 +23,9 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "cameraRef": "string_value",
+  "cameraRef": {
+    "instanceID": 0
+  },
   "width": 0,
   "height": 0
 }

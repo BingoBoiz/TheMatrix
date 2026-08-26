@@ -24,9 +24,9 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "path": "string_value",
-  "newSceneSetup": "string_value",
-  "newSceneMode": "string_value"
+  "path": "value",
+  "newSceneSetup": {},
+  "newSceneMode": {}
 }
 ```
 

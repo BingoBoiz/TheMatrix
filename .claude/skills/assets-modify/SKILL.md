@@ -1,9 +1,13 @@
 ---
 name: assets-modify
-description: Modify an asset file in the project. Use 'assets-get-data' first to inspect the asset structure before modifying. Not allowed to modify asset files in the 'Packages/' folder — modify them in 'Assets/'. Three modification surfaces are available (content, pathPatches, jsonPatch) — see the skill body for details.
+description: "Modify an asset file in the project. Use 'assets-get-data' first to inspect the asset structure before modifying. Not allowed to modify asset files in the 'Packages/' folder — modify them in 'Assets/'. Three modification surfaces are available (content, pathPatches, jsonPatch) — see the skill body for details. Modifying is irreversible for the asset file: a wrong patch can corrupt it or break references, so keep changes minimal."
 ---
 
 # Assets / Modify
+
+## Warning
+
+Modifications are written straight into the serialized asset — there is no undo. Inspect the structure with 'assets-get-data' first and apply the smallest patch that achieves the goal.
 
 ## Three modification surfaces
 
@@ -26,10 +30,12 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "assetRef": "string_value",
-  "content": "string_value",
-  "pathPatches": "string_value",
-  "jsonPatch": "string_value"
+  "assetRef": {
+    "instanceID": 0
+  },
+  "content": {},
+  "pathPatches": [],
+  "jsonPatch": "value"
 }
 ```
 

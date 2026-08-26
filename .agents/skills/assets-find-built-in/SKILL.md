@@ -24,8 +24,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "name": "string_value",
-  "type": "string_value",
+  "name": "value",
+  "type": {},
   "maxResults": 0
 }
 ```

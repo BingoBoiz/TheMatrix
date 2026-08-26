@@ -21,8 +21,10 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "sceneRef": "string_value",
-  "loadSceneMode": "string_value"
+  "sceneRef": {
+    "instanceID": 0
+  },
+  "loadSceneMode": "Single"
 }
 ```
 

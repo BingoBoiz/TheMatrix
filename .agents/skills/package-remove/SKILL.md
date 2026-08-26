@@ -1,11 +1,15 @@
 ---
 name: package-remove
-description: Uninstall a UPM package from the Unity project. Modifies `manifest.json` and may trigger a domain reload — the final result is delivered after the reload via the request's `requestId`. Built-in packages and packages that are dependencies of others cannot be removed. Use 'package-list' to list installed packages first.
+description: Uninstall a UPM package from the Unity project. Modifies `manifest.json` and may trigger a domain reload — the final result is delivered after the reload via the request's `requestId`. Built-in packages and packages that are dependencies of others cannot be removed. Removing a package whose API is used by project code breaks compilation — check usages with 'package-list' (and search the codebase) first.
 ---
 
 # Package Manager / Remove
 
 Remove (uninstall) a package from the Unity project. This removes the package from the project's manifest.json and triggers package resolution. Note: Built-in packages and packages that are dependencies of other installed packages cannot be removed. Note: Package removal may trigger a domain reload. The result will be sent after the reload completes. Use 'package-list' tool to list installed packages first.
+
+## Warning
+
+If project code uses APIs from the removed package, compilation breaks until that code is migrated. Confirm the package is unused (or that you are ready to fix the fallout) before removing.
 
 ## Inputs
 
@@ -22,7 +26,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "packageId": "string_value"
+  "packageId": "value"
 }
 ```
 

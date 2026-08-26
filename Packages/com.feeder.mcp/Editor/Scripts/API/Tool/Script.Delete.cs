@@ -23,10 +23,14 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Delete one or more `.cs` script files from disk, refresh the AssetDatabase, and " +
             "wait for Unity compilation to settle before delivering the final result via the request's `requestId`. " +
-            "Pair with '" + ScriptReadToolId + "' to inspect files before deletion.")]
+            "IRREVERSIBLE — the file and its `.meta` are removed permanently (no undo), so inspect with '" +
+            ScriptReadToolId + "' before deleting.")]
         [AiSkillBody("Delete the script file(s). " +
             "Does AssetDatabase.Refresh() and waits for Unity compilation to complete before reporting results. " +
             "Use '" + ScriptReadToolId + "' tool to read existing script files first.\n\n" +
+            "## Warning\n\n" +
+            "This is IRREVERSIBLE: each `.cs` file and its sibling `.meta` are deleted from disk permanently — " +
+            "no undo and no trash. Read the file with '" + ScriptReadToolId + "' and confirm the exact path first.\n\n" +
             "## Inputs\n\n" +
             "- `files` — non-empty array of `.cs` paths. Every entry must exist on disk.\n" +
             "- `requestId` — required for the processing/delivered-later contract.\n\n" +

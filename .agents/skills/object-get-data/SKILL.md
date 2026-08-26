@@ -1,11 +1,16 @@
 ---
 name: object-get-data
-description: Get serialized data for a Unity `UnityEngine.Object` — all serializable fields and properties. Supports token-saving path-scoped reads via `paths` or `viewQuery`. Pair with 'object-modify' when you need to write back.
+description: Get serialized data for a Unity `UnityEngine.Object` — all serializable fields and properties. Supports token-saving path-scoped reads via `paths` or `viewQuery`. Pair with 'object-modify' when you need to write back. For asset files on disk use 'assets-get-data' instead.
 ---
 
 # Object / Get Data
 
 Get data of the specified Unity Object. Returns serialized data of the object including its properties and fields. If need to modify the data use 'object-modify' tool.
+
+## When to use / when not
+
+- Use for any live `UnityEngine.Object` you already have a reference to (by instanceID) — components, scene objects, in-memory assets.
+- Do NOT use for asset files on disk — use 'assets-get-data' instead. To find a scene GameObject use 'gameobject-find'.
 
 ## Path-scoped reads (token-saving)
 
@@ -22,9 +27,11 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "objectRef": "string_value",
-  "paths": "string_value",
-  "viewQuery": "string_value"
+  "objectRef": {
+    "instanceID": 0
+  },
+  "paths": [],
+  "viewQuery": {}
 }
 ```
 

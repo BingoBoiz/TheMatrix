@@ -1,11 +1,15 @@
 ---
 name: assets-move
-description: Move or rename assets at the given project paths. Refreshes the AssetDatabase at the end. Use 'assets-find' to locate the assets first.
+description: Move or rename assets at the given project paths. Refreshes the AssetDatabase at the end. Moving/renaming can break references in scenes, prefabs and scripts — verify with 'assets-find' afterwards. Use 'assets-find' to locate the assets first.
 ---
 
 # Assets / Move
 
 Move the assets at paths in the project. Should be used for asset rename. Does AssetDatabase.Refresh() at the end. Use 'assets-find' tool to find assets before moving.
+
+## Warning
+
+Moving or renaming an asset can break references to it from scenes, prefabs, materials and scripts. Unity usually retargets references for moves inside `Assets/`, but verify the result with 'assets-find' and check the Console for reference errors afterwards.
 
 ## Inputs
 
@@ -23,8 +27,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "sourcePaths": "string_value",
-  "destinationPaths": "string_value"
+  "sourcePaths": {},
+  "destinationPaths": {}
 }
 ```
 

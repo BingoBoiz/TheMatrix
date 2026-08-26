@@ -30,14 +30,16 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "gameObjectRef": "string_value",
+  "gameObjectRef": {
+    "instanceID": 0
+  },
   "includeData": false,
   "includeComponents": false,
   "includeBounds": false,
   "includeHierarchy": false,
   "hierarchyDepth": 0,
-  "paths": "string_value",
-  "viewQuery": "string_value"
+  "paths": [],
+  "viewQuery": {}
 }
 ```
 

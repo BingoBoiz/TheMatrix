@@ -25,10 +25,16 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Get asset data from the asset file in the Unity project — every serializable " +
             "field and property. Supports token-saving path-scoped reads via `paths` or `viewQuery`. " +
-            "Use '" + AssetsFindToolId + "' to find the asset first.")]
+            "Use '" + AssetsFindToolId + "' to find the asset first. Inspect with this tool before '" +
+            AssetsModifyToolId + "'.")]
         [AiSkillBody("Get asset data from the asset file in the Unity project. " +
             "It includes all serializable fields and properties of the asset. " +
             "Use '" + AssetsFindToolId + "' tool to find asset before using this tool.\n\n" +
+            "## When to use / when not\n\n" +
+            "- Use to inspect a project asset's serialized structure — always inspect before modifying with '" +
+            AssetsModifyToolId + "'.\n" +
+            "- Do NOT use for live scene objects or components — use '" + Tool_Object.ObjectGetDataToolId + "' / '" +
+            Tool_GameObject.GameObjectFindToolId + "' instead.\n\n" +
             "## Path-scoped reads (token-saving)\n\n" +
             "Supply `paths` (a list of paths) to read only the listed fields/elements via " +
             "`Reflector.TryReadAt`, or `viewQuery` (a `ViewQuery`) to navigate to a subtree and/or filter by " +

@@ -110,15 +110,15 @@ namespace Feeder.MCP
             public List<McpFeature> Tools { get; set; } = new();
             public List<McpFeature> Prompts { get; set; } = new();
             public List<McpFeature> Resources { get; set; } = new();
-            public Dictionary<string, bool> SkillAutoGenerate { get; set; } = new() { ["claude-code"] = true };
+            public Dictionary<string, bool> SkillAutoGenerate { get; set; } = new() { ["claude-code"] = true, ["deepseek"] = true };
 
             /// <summary>
             /// Per-agent opt-in for writing the agent's MCP config file automatically on editor
             /// load (e.g. Claude Code's project-root <c>.mcp.json</c>). Keyed by agentId.
-            /// Defaults to enabled for Claude Code so a freshly installed package works without
-            /// opening the connector window.
+            /// Defaults to enabled for Claude Code and DeepSeek so a freshly installed package
+            /// works without opening the connector window.
             /// </summary>
-            public Dictionary<string, bool> AgentAutoConfigure { get; set; } = new() { ["claude-code"] = true };
+            public Dictionary<string, bool> AgentAutoConfigure { get; set; } = new() { ["claude-code"] = true, ["deepseek"] = true };
 
             /// <summary>
             /// When non-null, only the tools whose names appear in this list are enabled;
@@ -141,8 +141,8 @@ namespace Feeder.MCP
                 KeepServerRunning = !isCi;
                 GenerateSkillFiles = false;
                 SkillsPath = ".claude/skills"; // default skills location for Claude Code
-                SkillAutoGenerate = new() { ["claude-code"] = true };
-                AgentAutoConfigure = new() { ["claude-code"] = true };
+                SkillAutoGenerate = new() { ["claude-code"] = true, ["deepseek"] = true };
+                AgentAutoConfigure = new() { ["claude-code"] = true, ["deepseek"] = true };
                 TransportMethod = TransportMethod.streamableHttp;
                 AuthOption = AuthOption.none;
                 ConnectionMode = ConnectionMode.Custom;

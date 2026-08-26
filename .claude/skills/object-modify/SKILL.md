@@ -1,11 +1,15 @@
 ---
 name: object-modify
-description: Modify a Unity `UnityEngine.Object`'s serializable fields/properties. Three modification surfaces are available (`objectDiff`, `pathPatches`, `jsonPatch`) — see the skill body. Use 'object-get-data' first to inspect the object structure.
+description: Modify a Unity `UnityEngine.Object`'s serializable fields/properties. Three modification surfaces are available (`objectDiff`, `pathPatches`, `jsonPatch`) — see the skill body. Use 'object-get-data' first to inspect the object structure. Changes are written directly into the object (no undo) — keep them minimal and verify with 'object-get-data' afterwards.
 ---
 
 # Object / Modify
 
 Modify the specified Unity Object. Allows direct modification of object fields and properties. Use 'object-get-data' first to inspect the object structure before modifying.
+
+## Warning
+
+Changes are applied directly to the serialized object — there is no undo. Inspect first, patch minimally, and re-read with 'object-get-data' to confirm the result.
 
 ## Three modification surfaces
 
@@ -28,10 +32,12 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "objectRef": "string_value",
-  "objectDiff": "string_value",
-  "pathPatches": "string_value",
-  "jsonPatch": "string_value"
+  "objectRef": {
+    "instanceID": 0
+  },
+  "objectDiff": {},
+  "pathPatches": [],
+  "jsonPatch": "value"
 }
 ```
 

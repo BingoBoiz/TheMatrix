@@ -1,11 +1,16 @@
 ---
 name: assets-get-data
-description: Get asset data from the asset file in the Unity project — every serializable field and property. Supports token-saving path-scoped reads via `paths` or `viewQuery`. Use 'assets-find' to find the asset first.
+description: Get asset data from the asset file in the Unity project — every serializable field and property. Supports token-saving path-scoped reads via `paths` or `viewQuery`. Use 'assets-find' to find the asset first. Inspect with this tool before 'assets-modify'.
 ---
 
 # Assets / Get Data
 
 Get asset data from the asset file in the Unity project. It includes all serializable fields and properties of the asset. Use 'assets-find' tool to find asset before using this tool.
+
+## When to use / when not
+
+- Use to inspect a project asset's serialized structure — always inspect before modifying with 'assets-modify'.
+- Do NOT use for live scene objects or components — use 'object-get-data' / 'gameobject-find' instead.
 
 ## Path-scoped reads (token-saving)
 
@@ -22,9 +27,11 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "assetRef": "string_value",
-  "paths": "string_value",
-  "viewQuery": "string_value"
+  "assetRef": {
+    "instanceID": 0
+  },
+  "paths": [],
+  "viewQuery": {}
 }
 ```
 

@@ -26,11 +26,15 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "gameObjectRef": "string_value",
-  "componentRef": "string_value",
-  "componentDiff": "string_value",
-  "pathPatches": "string_value",
-  "jsonPatch": "string_value"
+  "gameObjectRef": {
+    "instanceID": 0
+  },
+  "componentRef": {
+    "instanceID": 0
+  },
+  "componentDiff": {},
+  "pathPatches": [],
+  "jsonPatch": "value"
 }
 ```
 

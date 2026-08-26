@@ -22,13 +22,15 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "name": "string_value",
-  "parentGameObjectRef": "string_value",
-  "position": "string_value",
-  "rotation": "string_value",
-  "scale": "string_value",
+  "name": "value",
+  "parentGameObjectRef": {
+    "instanceID": 0
+  },
+  "position": {},
+  "rotation": {},
+  "scale": {},
   "isLocalSpace": false,
-  "primitiveType": "string_value"
+  "primitiveType": {}
 }
 ```
 

@@ -22,10 +22,13 @@ namespace Feeder.MCP.Editor.API
             Title = "Scene / Unload"
         )]
         [AiSkillDescription("Unload an opened scene from the Unity Editor (asynchronously via " +
-            "`SceneManager.UnloadSceneAsync`). " +
-            "Use '" + SceneListOpenedToolId + "' to find the scene name first.")]
+            "`SceneManager.UnloadSceneAsync`). Unsaved changes in that scene are lost — save with '" +
+            SceneSaveToolId + "' first if needed. Use '" + SceneListOpenedToolId + "' to find the scene name first.")]
         [AiSkillBody("Unload scene from the Opened scenes in Unity Editor. " +
             "Use '" + SceneListOpenedToolId + "' tool to get the list of all opened scenes.\n\n" +
+            "## Warning\n\n" +
+            "Any unsaved changes in the unloaded scene are lost. If the scene may have unsaved edits, save it " +
+            "with '" + SceneSaveToolId + "' before unloading.\n\n" +
             "## Inputs\n\n" +
             "- `name` — required non-empty scene name. Must match an opened scene; otherwise throws.\n\n" +
             "## Behavior\n\n" +

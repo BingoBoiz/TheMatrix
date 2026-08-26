@@ -4,7 +4,6 @@ using Feeder.MCP.Editor.Utils;
 using Feeder.MCP.Utils;
 using UnityEditor;
 using UnityEngine;
-using AiAgentConfiguratorRegistry = Feeder.McpPlugin.AgentConfig.AiAgentConfiguratorRegistry;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Feeder.MCP.Editor
@@ -34,7 +33,7 @@ namespace Feeder.MCP.Editor
             var savedAgentId = MainWindowEditor.selectedAiAgentId.Value;
             if (string.IsNullOrEmpty(savedAgentId))
                 savedAgentId = "claude-code";
-            var agent = AiAgentConfiguratorRegistry.GetByAgentId(savedAgentId);
+            var agent = AiAgentCatalog.GetByAgentId(savedAgentId);
             if (agent?.SupportsSkills == true && UnityMcpPluginEditor.IsAutoGenerateSkills(agent.AgentId))
             {
                 UnityMcpPluginEditor.SkillsPath = agent.SkillsPath!;

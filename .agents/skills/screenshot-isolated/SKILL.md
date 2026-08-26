@@ -32,18 +32,20 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "gameObjectRef": "string_value",
-  "includeChildren": "string_value",
-  "isolated": "string_value",
-  "backgroundMode": "string_value",
-  "backgroundColor": "string_value",
-  "cameraView": "string_value",
-  "fieldOfView": "string_value",
-  "nearClipPlane": "string_value",
-  "farClipPlane": "string_value",
-  "padding": "string_value",
-  "lights": "string_value",
-  "resolution": "string_value"
+  "gameObjectRef": {
+    "instanceID": 0
+  },
+  "includeChildren": {},
+  "isolated": {},
+  "backgroundMode": {},
+  "backgroundColor": "value",
+  "cameraView": {},
+  "fieldOfView": {},
+  "nearClipPlane": {},
+  "farClipPlane": {},
+  "padding": {},
+  "lights": "value",
+  "resolution": {}
 }
 ```
 

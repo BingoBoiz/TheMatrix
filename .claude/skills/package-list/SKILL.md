@@ -20,8 +20,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "sourceFilter": "string_value",
-  "nameFilter": "string_value",
+  "sourceFilter": "All",
+  "nameFilter": "value",
   "directDependenciesOnly": false
 }
 ```

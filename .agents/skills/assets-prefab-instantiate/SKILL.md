@@ -21,11 +21,11 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "prefabAssetPath": "string_value",
-  "gameObjectPath": "string_value",
-  "position": "string_value",
-  "rotation": "string_value",
-  "scale": "string_value",
+  "prefabAssetPath": "value",
+  "gameObjectPath": "value",
+  "position": {},
+  "rotation": {},
+  "scale": {},
   "isLocalSpace": false
 }
 ```

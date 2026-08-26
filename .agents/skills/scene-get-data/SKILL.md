@@ -1,11 +1,16 @@
 ---
 name: scene-get-data
-description: Retrieve the list of root GameObjects in the specified opened scene (or the active scene when `openedSceneName` is empty). Supports token-saving path-scoped reads over the root-GameObjects array via `paths` or `viewQuery`. Use 'scene-list-opened' to enumerate scenes.
+description: Retrieve the list of root GameObjects in the specified opened scene (or the active scene when `openedSceneName` is empty). Supports token-saving path-scoped reads over the root-GameObjects array via `paths` or `viewQuery`. Use 'scene-list-opened' to enumerate scenes. For one specific GameObject use 'gameobject-find' instead.
 ---
 
 # Scene / Get Data
 
 This tool retrieves the list of root GameObjects in the specified scene. Use 'scene-list-opened' tool to get the list of all opened scenes.
+
+## When to use / when not
+
+- Use when you need the scene's root GameObject list or a hierarchy overview.
+- Do NOT use to locate one specific GameObject — use 'gameobject-find' instead. For just the opened scene names use 'scene-list-opened'.
 
 ## Toggles (all default `false` to keep responses small)
 
@@ -29,13 +34,13 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "openedSceneName": "string_value",
+  "openedSceneName": "value",
   "includeRootGameObjects": false,
   "includeChildrenDepth": 0,
   "includeBounds": false,
   "includeData": false,
-  "paths": "string_value",
-  "viewQuery": "string_value"
+  "paths": [],
+  "viewQuery": {}
 }
 ```
 

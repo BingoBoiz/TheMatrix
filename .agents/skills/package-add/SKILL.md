@@ -26,7 +26,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "packageId": "string_value"
+  "packageId": "value"
 }
 ```
 

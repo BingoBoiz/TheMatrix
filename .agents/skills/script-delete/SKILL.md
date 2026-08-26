@@ -1,11 +1,15 @@
 ---
 name: script-delete
-description: Delete one or more `.cs` script files from disk, refresh the AssetDatabase, and wait for Unity compilation to settle before delivering the final result via the request's `requestId`. Pair with 'script-read' to inspect files before deletion.
+description: Delete one or more `.cs` script files from disk, refresh the AssetDatabase, and wait for Unity compilation to settle before delivering the final result via the request's `requestId`. IRREVERSIBLE — the file and its `.meta` are removed permanently (no undo), so inspect with 'script-read' before deleting.
 ---
 
 # Script / Delete
 
 Delete the script file(s). Does AssetDatabase.Refresh() and waits for Unity compilation to complete before reporting results. Use 'script-read' tool to read existing script files first.
+
+## Warning
+
+This is IRREVERSIBLE: each `.cs` file and its sibling `.meta` are deleted from disk permanently — no undo and no trash. Read the file with 'script-read' and confirm the exact path first.
 
 ## Inputs
 
@@ -23,7 +27,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "files": "string_value"
+  "files": {}
 }
 ```
 

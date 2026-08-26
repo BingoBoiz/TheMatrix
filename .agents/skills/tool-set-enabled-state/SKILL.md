@@ -23,8 +23,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "tools": "string_value",
-  "includeLogs": "string_value"
+  "tools": {},
+  "includeLogs": {}
 }
 ```
 

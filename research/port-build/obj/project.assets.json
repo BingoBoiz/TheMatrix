@@ -1,0 +1,126 @@
+{
+  "version": 4,
+  "targets": {
+    "netstandard2.1": {
+      "Feeder.McpPlugin.Common/1.0.0": {
+        "type": "project",
+        "framework": ".NETStandard,Version=v2.1",
+        "dependencies": {
+          "Feeder.ReflectorNet": "1.0.0"
+        },
+        "compile": {
+          "bin/placeholder/Feeder.McpPlugin.Common.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Feeder.McpPlugin.Common.dll": {}
+        }
+      },
+      "Feeder.ReflectorNet/1.0.0": {
+        "type": "project",
+        "framework": ".NETStandard,Version=v2.1",
+        "compile": {
+          "bin/placeholder/Feeder.ReflectorNet.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Feeder.ReflectorNet.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Feeder.McpPlugin.Common/1.0.0": {
+      "type": "project",
+      "path": "Feeder.McpPlugin.Common.csproj",
+      "msbuildProject": "Feeder.McpPlugin.Common.csproj"
+    },
+    "Feeder.ReflectorNet/1.0.0": {
+      "type": "project",
+      "path": "Feeder.ReflectorNet.csproj",
+      "msbuildProject": "Feeder.ReflectorNet.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "netstandard2.1": [
+      "Feeder.McpPlugin.Common >= 1.0.0",
+      "Feeder.ReflectorNet >= 1.0.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\Admin\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+  },
+  "project": {
+    "version": "1.0.0",
+    "restore": {
+      "projectUniqueName": "D:\\Unity\\TheMatrix\\research\\port-build\\Feeder.McpPlugin.csproj",
+      "projectName": "Feeder.McpPlugin",
+      "projectPath": "D:\\Unity\\TheMatrix\\research\\port-build\\Feeder.McpPlugin.csproj",
+      "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
+      "outputPath": "D:\\Unity\\TheMatrix\\research\\port-build\\obj\\",
+      "projectStyle": "PackageReference",
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
+      "configFilePaths": [
+        "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "netstandard2.1"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "netstandard2.1": {
+          "framework": "netstandard2.1",
+          "targetAlias": "netstandard2.1",
+          "projectReferences": {
+            "D:\\Unity\\TheMatrix\\research\\port-build\\Feeder.McpPlugin.Common.csproj": {
+              "projectPath": "D:\\Unity\\TheMatrix\\research\\port-build\\Feeder.McpPlugin.Common.csproj"
+            },
+            "D:\\Unity\\TheMatrix\\research\\port-build\\Feeder.ReflectorNet.csproj": {
+              "projectPath": "D:\\Unity\\TheMatrix\\research\\port-build\\Feeder.ReflectorNet.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "10.0.300"
+    },
+    "frameworks": {
+      "netstandard2.1": {
+        "framework": "netstandard2.1",
+        "targetAlias": "netstandard2.1",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "frameworkReferences": {
+          "NETStandard.Library": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301\\RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

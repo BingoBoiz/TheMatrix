@@ -51,9 +51,13 @@ namespace Feeder.MCP.Editor.API
                 "Modify an asset file in the project. " +
                 "Use '" + AssetsGetDataToolId + "' first to inspect the asset structure before modifying. " +
                 "Not allowed to modify asset files in the 'Packages/' folder — modify them in 'Assets/'. " +
-                "Three modification surfaces are available (content, pathPatches, jsonPatch) — see the skill body for details.";
+                "Three modification surfaces are available (content, pathPatches, jsonPatch) — see the skill body for details. " +
+                "Modifying is irreversible for the asset file: a wrong patch can corrupt it or break references, so keep changes minimal.";
 
             public const string Body =
+                "## Warning\n\n" +
+                "Modifications are written straight into the serialized asset — there is no undo. Inspect the " +
+                "structure with '" + AssetsGetDataToolId + "' first and apply the smallest patch that achieves the goal.\n\n" +
                 "## Three modification surfaces\n\n" +
                 "Use whichever fits the task:\n\n" +
                 "1. `content` — full `SerializedMember` override (legacy, backwards compatible).\n" +

@@ -23,12 +23,16 @@ namespace Feeder.MCP.Editor.API
         [AiSkillDescription("Uninstall a UPM package from the Unity project. Modifies `manifest.json` and may " +
             "trigger a domain reload — the final result is delivered after the reload via the request's `requestId`. " +
             "Built-in packages and packages that are dependencies of others cannot be removed. " +
-            "Use '" + PackageListToolId + "' to list installed packages first.")]
+            "Removing a package whose API is used by project code breaks compilation — check usages with '" +
+            PackageListToolId + "' (and search the codebase) first.")]
         [AiSkillBody("Remove (uninstall) a package from the Unity project. " +
             "This removes the package from the project's manifest.json and triggers package resolution. " +
             "Note: Built-in packages and packages that are dependencies of other installed packages cannot be removed. " +
             "Note: Package removal may trigger a domain reload. The result will be sent after the reload completes. " +
             "Use '" + PackageListToolId + "' tool to list installed packages first.\n\n" +
+            "## Warning\n\n" +
+            "If project code uses APIs from the removed package, compilation breaks until that code is migrated. " +
+            "Confirm the package is unused (or that you are ready to fix the fallout) before removing.\n\n" +
             "## Inputs\n\n" +
             "- `packageId` — package name (e.g. `com.unity.textmeshpro`). A trailing `@<version>` is stripped automatically " +
             "before being passed to `Client.Remove`, so accidental versioned IDs still work.\n\n" +

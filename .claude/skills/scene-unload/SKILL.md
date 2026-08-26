@@ -1,11 +1,15 @@
 ---
 name: scene-unload
-description: Unload an opened scene from the Unity Editor (asynchronously via `SceneManager.UnloadSceneAsync`). Use 'scene-list-opened' to find the scene name first.
+description: Unload an opened scene from the Unity Editor (asynchronously via `SceneManager.UnloadSceneAsync`). Unsaved changes in that scene are lost — save with 'scene-save' first if needed. Use 'scene-list-opened' to find the scene name first.
 ---
 
 # Scene / Unload
 
 Unload scene from the Opened scenes in Unity Editor. Use 'scene-list-opened' tool to get the list of all opened scenes.
+
+## Warning
+
+Any unsaved changes in the unloaded scene are lost. If the scene may have unsaved edits, save it with 'scene-save' before unloading.
 
 ## Inputs
 
@@ -22,7 +26,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "name": "string_value"
+  "name": "value"
 }
 ```
 

@@ -23,8 +23,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "openedSceneName": "string_value",
-  "path": "string_value"
+  "openedSceneName": "value",
+  "path": "value"
 }
 ```
 

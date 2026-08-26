@@ -24,8 +24,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "filePath": "string_value",
-  "content": "string_value"
+  "filePath": "Assets/Scripts/MyScript.cs",
+  "content": "value"
 }
 ```
 

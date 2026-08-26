@@ -61,12 +61,16 @@ namespace Feeder.MCP.Editor.API
         {
             public const string Description =
                 "Destroy a GameObject (and all nested children) in the currently opened Prefab or active Scene. " +
-                "Returns the destroyed GameObject's name, path, and instance ID for confirmation. " +
-                "Use 'gameobject-find' to locate the target first.";
+                "IRREVERSIBLE — the object is removed immediately without undo, so verify the exact target " +
+                "with 'gameobject-find' first. Returns the destroyed GameObject's name, path, and instance ID for confirmation.";
 
             public const string Body =
                 "Destroy GameObject and all nested GameObjects recursively in opened Prefab or in a Scene. " +
                 "Use 'gameobject-find' tool to find the target GameObject first.\n\n" +
+                "## Warning\n\n" +
+                "This is IRREVERSIBLE: `DestroyImmediate` removes the GameObject and all its children immediately, " +
+                "with no undo entry. In a Prefab edit stage the deletion is written back to the prefab asset when the " +
+                "stage is closed (saved). Always verify the exact target with 'gameobject-find' before calling.\n\n" +
                 "## Behavior\n\n" +
                 "Validates the `gameObjectRef`, resolves it on the main thread, then calls `Object.DestroyImmediate` " +
                 "(the immediate variant is required for Editor-mode operations). Returns a `DestroyGameObjectResult` " +

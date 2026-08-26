@@ -24,9 +24,9 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "regexSearch": "string_value",
-  "includeDescription": "string_value",
-  "includeInputs": "string_value"
+  "regexSearch": "value",
+  "includeDescription": {},
+  "includeInputs": {}
 }
 ```
 

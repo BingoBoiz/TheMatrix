@@ -23,9 +23,14 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Retrieve the list of root GameObjects in the specified opened scene " +
             "(or the active scene when `openedSceneName` is empty). Supports token-saving path-scoped reads over the " +
-            "root-GameObjects array via `paths` or `viewQuery`. Use '" + SceneListOpenedToolId + "' to enumerate scenes.")]
+            "root-GameObjects array via `paths` or `viewQuery`. Use '" + SceneListOpenedToolId + "' to enumerate scenes. " +
+            "For one specific GameObject use '" + Tool_GameObject.GameObjectFindToolId + "' instead.")]
         [AiSkillBody("This tool retrieves the list of root GameObjects in the specified scene. " +
             "Use '" + SceneListOpenedToolId + "' tool to get the list of all opened scenes.\n\n" +
+            "## When to use / when not\n\n" +
+            "- Use when you need the scene's root GameObject list or a hierarchy overview.\n" +
+            "- Do NOT use to locate one specific GameObject — use '" + Tool_GameObject.GameObjectFindToolId + "' " +
+            "instead. For just the opened scene names use '" + SceneListOpenedToolId + "'.\n\n" +
             "## Toggles (all default `false` to keep responses small)\n\n" +
             "- `includeRootGameObjects` — include root GameObjects in the scene data.\n" +
             "- `includeChildrenDepth` (default 3) — depth of the hierarchy to include.\n" +

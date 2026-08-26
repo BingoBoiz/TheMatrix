@@ -142,6 +142,18 @@ namespace Feeder.MCP.Editor.MatrixSpace
             },
             new()
             {
+                Id = "deepseek",
+                Label = "DeepSeek CLI",
+                DefaultExecutable = "dsh",
+                DefaultArguments = "{prompt}",
+                DefaultModels = "default",
+                InstallUrl = "https://github.com/deepseek-ai/DeepSeek-Harness",
+                Note = "DeepSeek Harness CLI (dsh). dsh is a harness launcher, not a plain chat CLI: " +
+                    "set the executable, arguments (e.g. the profile to boot) and environment to match your " +
+                    "installation — each turn runs statelessly, so prefer editing code through the MCP tools.",
+            },
+            new()
+            {
                 Id = "custom",
                 Label = "Custom CLI",
                 DefaultExecutable = "",

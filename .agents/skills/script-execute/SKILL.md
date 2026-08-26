@@ -27,10 +27,10 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "csharpCode": "string_value",
-  "className": "string_value",
-  "methodName": "string_value",
-  "parameters": "string_value",
+  "csharpCode": "value",
+  "className": "value",
+  "methodName": "value",
+  "parameters": {},
   "isMethodBody": false
 }
 ```

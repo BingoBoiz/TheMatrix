@@ -22,7 +22,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "message": "string_value"
+  "message": "value"
 }
 ```
 

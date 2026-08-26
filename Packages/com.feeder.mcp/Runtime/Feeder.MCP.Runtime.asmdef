@@ -1,15 +1,16 @@
 {
     "name": "Feeder.MCP.Runtime",
     "rootNamespace": "Feeder.MCP",
-    "references": [],
+    "references": [
+        "Feeder.ReflectorNet",
+        "Feeder.McpPlugin.Common",
+        "Feeder.McpPlugin"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Feeder.McpPlugin.dll",
-        "Feeder.McpPlugin.Common.dll",
-        "Feeder.ReflectorNet.dll",
         "R3.dll",
         "System.Text.Json.dll",
         "Microsoft.Extensions.Logging.dll",

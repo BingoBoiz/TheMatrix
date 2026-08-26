@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using R3;
 using UnityEngine;
 using UnityEngine.UIElements;
-using AiAgentConfiguratorRegistry = Feeder.McpPlugin.AgentConfig.AiAgentConfiguratorRegistry;
 
 namespace Feeder.MCP.Editor.UI
 {
@@ -35,8 +34,8 @@ namespace Feeder.MCP.Editor.UI
                 return;
             }
 
-            // Get agent names from registry
-            var agentNames = AiAgentConfiguratorRegistry.GetAgentNames();
+            // Get agent names from the catalog (shared registry + injected agents like DeepSeek)
+            var agentNames = AiAgentCatalog.GetAgentNames();
             aiAgentDropdown.choices = agentNames;
 
             // Load saved selection from PlayerPrefs
@@ -45,13 +44,13 @@ namespace Feeder.MCP.Editor.UI
 
             if (!string.IsNullOrEmpty(savedAiAgentId))
             {
-                selectedIndex = AiAgentConfiguratorRegistry.GetIndexByAgentId(savedAiAgentId);
+                selectedIndex = AiAgentCatalog.GetIndexByAgentId(savedAiAgentId);
                 if (selectedIndex < 0) selectedIndex = 0;
             }
             else
             {
                 // Default to Claude Code on initial setup
-                var claudeCodeIndex = AiAgentConfiguratorRegistry.GetIndexByAgentId("claude-code");
+                var claudeCodeIndex = AiAgentCatalog.GetIndexByAgentId("claude-code");
                 if (claudeCodeIndex >= 0) selectedIndex = claudeCodeIndex;
             }
 
@@ -71,7 +70,7 @@ namespace Feeder.MCP.Editor.UI
                 if (newIndex < 0) return;
 
                 // Save selection to PlayerPrefs
-                var configurator = AiAgentConfiguratorRegistry.All[newIndex];
+                var configurator = AiAgentCatalog.All[newIndex];
                 selectedAiAgentId.Value = configurator.AgentId;
 
                 // Load UI for the newly selected agent
@@ -87,7 +86,7 @@ namespace Feeder.MCP.Editor.UI
                 Logger.LogError($"Cannot reload agent UI: {nameof(aiAgentContainer)} or {nameof(aiAgentDropdown)} is null.");
                 return;
             }
-            var agentNames = AiAgentConfiguratorRegistry.GetAgentNames();
+            var agentNames = AiAgentCatalog.GetAgentNames();
             var index = agentNames.IndexOf(aiAgentDropdown.value);
             if (index < 0 && agentNames.Count > 0)
             {
@@ -123,10 +122,10 @@ namespace Feeder.MCP.Editor.UI
             // Clear any existing content
             container.Clear();
 
-            if (selectedIndex < 0 || selectedIndex >= AiAgentConfiguratorRegistry.All.Count)
+            if (selectedIndex < 0 || selectedIndex >= AiAgentCatalog.All.Count)
                 return;
 
-            var configurator = AiAgentConfiguratorRegistry.All[selectedIndex];
+            var configurator = AiAgentCatalog.All[selectedIndex];
             var view = new AiAgentConfiguratorView(configurator);
             currentAiAgentConfigurator = view;
 

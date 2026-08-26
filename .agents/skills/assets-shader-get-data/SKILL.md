@@ -29,13 +29,15 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "assetRef": "string_value",
-  "includeMessages": "string_value",
-  "includeProperties": "string_value",
-  "includeSubshaders": "string_value",
-  "includeSourceCode": "string_value",
-  "paths": "string_value",
-  "viewQuery": "string_value"
+  "assetRef": {
+    "instanceID": 0
+  },
+  "includeMessages": {},
+  "includeProperties": {},
+  "includeSubshaders": {},
+  "includeSourceCode": {},
+  "paths": [],
+  "viewQuery": {}
 }
 ```
 

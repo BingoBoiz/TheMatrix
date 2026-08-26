@@ -1,11 +1,15 @@
 ---
 name: assets-delete
-description: Delete the assets at the given project paths. Refreshes the AssetDatabase at the end. Use 'assets-find' to locate the assets first.
+description: Delete the assets at the given project paths. IRREVERSIBLE — deleted files are permanently removed from disk (no trash/undo), so verify with 'assets-find' first. Refreshes the AssetDatabase at the end.
 ---
 
 # Assets / Delete
 
 Delete the assets at paths from the project. Does AssetDatabase.Refresh() at the end. Use 'assets-find' tool to find assets before deleting.
+
+## Warning
+
+This is IRREVERSIBLE: `AssetDatabase.DeleteAssets` removes the files from disk permanently — there is no trash and no undo. Double-check each path with 'assets-find' before calling.
 
 ## Inputs
 
@@ -22,7 +26,7 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "paths": "string_value"
+  "paths": {}
 }
 ```
 

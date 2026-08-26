@@ -21,11 +21,16 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Move or rename assets at the given project paths. " +
             "Refreshes the AssetDatabase at the end. " +
-            "Use '" + AssetsFindToolId + "' to locate the assets first.")]
+            "Moving/renaming can break references in scenes, prefabs and scripts — verify with '" +
+            AssetsFindToolId + "' afterwards. Use '" + AssetsFindToolId + "' to locate the assets first.")]
         [AiSkillBody("Move the assets at paths in the project. " +
             "Should be used for asset rename. " +
             "Does AssetDatabase.Refresh() at the end. " +
             "Use '" + AssetsFindToolId + "' tool to find assets before moving.\n\n" +
+            "## Warning\n\n" +
+            "Moving or renaming an asset can break references to it from scenes, prefabs, materials and scripts. " +
+            "Unity usually retargets references for moves inside `Assets/`, but verify the result with '" +
+            AssetsFindToolId + "' and check the Console for reference errors afterwards.\n\n" +
             "## Inputs\n\n" +
             "- `sourcePaths` — paths of the assets to move.\n" +
             "- `destinationPaths` — target paths (must match `sourcePaths` length).\n\n" +

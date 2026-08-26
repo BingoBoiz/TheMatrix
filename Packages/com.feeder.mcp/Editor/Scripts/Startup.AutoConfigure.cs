@@ -5,7 +5,6 @@ using Feeder.MCP.Runtime.Utils;
 using Microsoft.Extensions.Logging;
 using UnityEditor;
 using UnityEngine;
-using AiAgentConfiguratorRegistry = Feeder.McpPlugin.AgentConfig.AiAgentConfiguratorRegistry;
 using static Feeder.McpPlugin.Common.Consts.MCP.Server;
 
 namespace Feeder.MCP.Editor
@@ -41,7 +40,7 @@ namespace Feeder.MCP.Editor
 
                 foreach (var agentId in UnityMcpPluginEditor.AutoConfigureAgentIds)
                 {
-                    var configurator = AiAgentConfiguratorRegistry.GetByAgentId(agentId);
+                    var configurator = AiAgentCatalog.GetByAgentId(agentId);
                     if (configurator == null)
                         continue;
 

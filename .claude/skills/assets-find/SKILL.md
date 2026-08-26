@@ -1,11 +1,16 @@
 ---
 name: assets-find
-description: "Search the Unity asset database using a search filter string. The filter accepts names, labels (`l:`), types (`t:`), AssetBundles (`b:`), areas (`a:`), and globs (`glob:`). See the body for the full filter syntax."
+description: "Search the Unity asset database using a search filter string. The filter accepts names, labels (`l:`), types (`t:`), AssetBundles (`b:`), areas (`a:`), and globs (`glob:`). See the body for the full filter syntax. For scene GameObjects use 'gameobject-find' instead."
 ---
 
 # Assets / Find
 
 Search the asset database using the search filter string. Allows you to search for Assets. The string argument can provide names, labels or types (classnames).
+
+## When to use / when not
+
+- Use to locate project assets by name, label, type, bundle, area or glob.
+- Do NOT use to locate scene GameObjects — use 'gameobject-find'. Once you have an asset, read its data with 'assets-get-data'.
 
 ## Filter syntax
 
@@ -25,8 +30,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "filter": "string_value",
-  "searchInFolders": "string_value",
+  "filter": "value",
+  "searchInFolders": {},
   "maxResults": 0
 }
 ```

@@ -25,13 +25,13 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "filter": "string_value",
+  "filter": {},
   "knownNamespace": false,
   "typeNameMatchLevel": 0,
   "methodNameMatchLevel": 0,
   "parametersMatchLevel": 0,
-  "targetObject": "string_value",
-  "inputParameters": "string_value",
+  "targetObject": {},
+  "inputParameters": {},
   "executeInMainThread": false
 }
 ```

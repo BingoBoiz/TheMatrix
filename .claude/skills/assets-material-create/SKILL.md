@@ -23,8 +23,8 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "assetPath": "string_value",
-  "shaderName": "string_value"
+  "assetPath": "value",
+  "shaderName": "value"
 }
 ```
 

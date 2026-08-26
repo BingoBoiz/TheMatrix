@@ -25,10 +25,15 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Modify a Unity `UnityEngine.Object`'s serializable fields/properties. " +
             "Three modification surfaces are available (`objectDiff`, `pathPatches`, `jsonPatch`) — see the skill body. " +
-            "Use '" + ObjectGetDataToolId + "' first to inspect the object structure.")]
+            "Use '" + ObjectGetDataToolId + "' first to inspect the object structure. " +
+            "Changes are written directly into the object (no undo) — keep them minimal and verify with '" +
+            ObjectGetDataToolId + "' afterwards.")]
         [AiSkillBody("Modify the specified Unity Object. " +
             "Allows direct modification of object fields and properties. " +
             "Use '" + ObjectGetDataToolId + "' first to inspect the object structure before modifying.\n\n" +
+            "## Warning\n\n" +
+            "Changes are applied directly to the serialized object — there is no undo. Inspect first, patch minimally, " +
+            "and re-read with '" + ObjectGetDataToolId + "' to confirm the result.\n\n" +
             "## Three modification surfaces\n\n" +
             "Use whichever fits the task:\n\n" +
             "1. `objectDiff` — full `SerializedMember` diff (legacy, backwards compatible).\n" +

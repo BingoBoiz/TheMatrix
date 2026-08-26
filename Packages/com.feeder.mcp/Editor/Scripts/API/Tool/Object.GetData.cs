@@ -24,10 +24,16 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Get serialized data for a Unity `UnityEngine.Object` — all serializable fields " +
             "and properties. Supports token-saving path-scoped reads via `paths` or `viewQuery`. " +
-            "Pair with '" + ObjectModifyToolId + "' when you need to write back.")]
+            "Pair with '" + ObjectModifyToolId + "' when you need to write back. " +
+            "For asset files on disk use '" + Tool_Assets.AssetsGetDataToolId + "' instead.")]
         [AiSkillBody("Get data of the specified Unity Object. " +
             "Returns serialized data of the object including its properties and fields. " +
             "If need to modify the data use '" + ObjectModifyToolId + "' tool.\n\n" +
+            "## When to use / when not\n\n" +
+            "- Use for any live `UnityEngine.Object` you already have a reference to (by instanceID) — components, " +
+            "scene objects, in-memory assets.\n" +
+            "- Do NOT use for asset files on disk — use '" + Tool_Assets.AssetsGetDataToolId + "' instead. " +
+            "To find a scene GameObject use '" + Tool_GameObject.GameObjectFindToolId + "'.\n\n" +
             "## Path-scoped reads (token-saving)\n\n" +
             "Supply `paths` (a list of paths) to read only the listed fields/elements via `Reflector.TryReadAt`, or " +
             "`viewQuery` (a `ViewQuery`) to navigate to a subtree and/or filter by name regex / max depth / type via " +

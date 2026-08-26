@@ -25,9 +25,11 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "prefabAssetPath": "string_value",
-  "gameObjectRef": "string_value",
-  "sourcePrefabAssetPath": "string_value",
+  "prefabAssetPath": "value",
+  "gameObjectRef": {
+    "instanceID": 0
+  },
+  "sourcePrefabAssetPath": "value",
   "connectGameObjectToPrefab": false
 }
 ```

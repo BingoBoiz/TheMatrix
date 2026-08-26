@@ -20,9 +20,14 @@ namespace Feeder.MCP.Editor.API
         )]
         [AiSkillDescription("Search the Unity asset database using a search filter string. " +
             "The filter accepts names, labels (`l:`), types (`t:`), AssetBundles (`b:`), areas (`a:`), and globs (`glob:`). " +
-            "See the body for the full filter syntax.")]
+            "See the body for the full filter syntax. For scene GameObjects use '" +
+            Tool_GameObject.GameObjectFindToolId + "' instead.")]
         [AiSkillBody("Search the asset database using the search filter string. " +
             "Allows you to search for Assets. The string argument can provide names, labels or types (classnames).\n\n" +
+            "## When to use / when not\n\n" +
+            "- Use to locate project assets by name, label, type, bundle, area or glob.\n" +
+            "- Do NOT use to locate scene GameObjects — use '" + Tool_GameObject.GameObjectFindToolId + "'. " +
+            "Once you have an asset, read its data with '" + AssetsGetDataToolId + "'.\n\n" +
             "## Filter syntax\n\n" +
             "- **Name** — filter assets by their filename (without extension). Words separated by whitespace are " +
             "treated as separate name searches.\n" +

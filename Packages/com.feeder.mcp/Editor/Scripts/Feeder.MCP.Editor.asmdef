@@ -2,7 +2,10 @@
     "name": "Feeder.MCP.Editor",
     "rootNamespace": "Feeder.MCP.Editor",
     "references": [
-        "Feeder.MCP.Runtime"
+        "Feeder.MCP.Runtime",
+        "Feeder.ReflectorNet",
+        "Feeder.McpPlugin.Common",
+        "Feeder.McpPlugin"
     ],
     "includePlatforms": [
         "Editor"
@@ -11,9 +14,6 @@
     "allowUnsafeCode": false,
     "overrideReferences": true,
     "precompiledReferences": [
-        "Feeder.ReflectorNet.dll",
-        "Feeder.McpPlugin.dll",
-        "Feeder.McpPlugin.Common.dll",
         "R3.dll",
         "Microsoft.Extensions.Logging.Abstractions.dll",
         "Microsoft.Extensions.Logging.dll",

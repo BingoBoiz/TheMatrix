@@ -22,7 +22,7 @@ Example input:
 ```json
 {
   "maxEntries": 0,
-  "logTypeFilter": "string_value",
+  "logTypeFilter": {},
   "includeStackTrace": false,
   "lastMinutes": 0
 }

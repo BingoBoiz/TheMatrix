@@ -32,16 +32,16 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "testMode": "string_value",
-  "testAssembly": "string_value",
-  "testNamespace": "string_value",
-  "testClass": "string_value",
-  "testMethod": "string_value",
+  "testMode": "EditMode",
+  "testAssembly": "value",
+  "testNamespace": "value",
+  "testClass": "value",
+  "testMethod": "value",
   "includePassingTests": false,
   "includeMessages": false,
   "includeStacktrace": false,
   "includeLogs": false,
-  "logType": "string_value",
+  "logType": "Error",
   "includeLogsStacktrace": false
 }
 ```

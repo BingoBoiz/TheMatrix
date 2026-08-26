@@ -22,9 +22,9 @@ Call this tool through the MCP client connected to the local Matrix AI Connector
 Example input:
 ```json
 {
-  "typeName": "string_value",
-  "descriptionMode": "string_value",
-  "propertyDescriptionMode": "string_value",
+  "typeName": "value",
+  "descriptionMode": "Include",
+  "propertyDescriptionMode": "Include",
   "includeNestedTypes": false,
   "writeIndented": false
 }
