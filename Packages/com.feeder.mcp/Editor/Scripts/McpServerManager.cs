@@ -281,14 +281,28 @@ namespace Feeder.MCP.Editor
                             UnityEngine.Debug.Log($"Failed to delete MCP server folder. Attempting to stop the server process...");
                             try
                             {
-                                if (!StopServer(force: true))
+                                StopServer(force: true);
+
+                                // StopServer only knows the process THIS editor session tracks, and it
+                                // returns true without killing anything when _serverProcess is null. That
+                                // leaves two very common cases holding the file lock forever:
+                                //  - an orphan kept alive by Keep Server Running across an editor restart/crash;
+                                //  - a live process not re-attached yet, because CheckExistingProcess runs on
+                                //    EditorApplication.update while this path runs earlier, from
+                                //    OnAfterAssemblyReload -> ConnectIfNeeded -> InstallServerBinaryIfNeeded.
+                                // Without the sweep below the delete never succeeds, so the install never
+                                // completes and the plugin never connects — with no way to recover short of
+                                // killing the process by hand.
+                                var swept = KillProcessesLockingBinaryFolder();
+
+                                if (swept > 0)
                                 {
-                                    UnityEngine.Debug.LogWarning($"No running MCP server process found to stop.");
+                                    UnityEngine.Debug.Log($"Stopped {swept} MCP server process(es) holding the binary. Retrying deletion...");
+                                    Thread.Sleep(2000); // Wait a moment for the process to exit and release file locks
                                 }
                                 else
                                 {
-                                    UnityEngine.Debug.Log($"Stop signal sent to MCP server process. Retrying deletion...");
-                                    Thread.Sleep(2000); // Wait a moment for the process to exit and release file locks
+                                    UnityEngine.Debug.LogWarning($"No running MCP server process found to stop.");
                                 }
                             }
                             catch (Exception stopEx)
@@ -334,6 +348,73 @@ namespace Feeder.MCP.Editor
                 }
             }
             return false;
+        }
+
+        /// <summary>
+        /// Force-kills every MCP server process running from THIS project's binary cache folder,
+        /// tracked or not, and returns how many were killed.
+        ///
+        /// Matching is by executable path under <see cref="ExecutableFolderRootPath"/>, so a server
+        /// belonging to another Unity project (its own Library/mcp-server) is never touched.
+        /// </summary>
+        static int KillProcessesLockingBinaryFolder()
+        {
+            // Trailing separator so the sibling staging folder ("<root>-staging-<guid>") can never match.
+            var rootPath = ExecutableFolderRootPath.TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var killed = 0;
+
+            Process[] candidates;
+            try
+            {
+                candidates = Process.GetProcessesByName(McpServerProcessName);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("Could not enumerate MCP server processes: {message}", ex.Message);
+                return 0;
+            }
+
+            foreach (var process in candidates)
+            {
+                try
+                {
+                    if (process.HasExited)
+                        continue;
+
+                    // MainModule throws for processes owned by another user or already gone — those are
+                    // not ours to kill anyway, so skipping on failure is the correct behaviour.
+                    var executablePath = process.MainModule?.FileName;
+                    if (string.IsNullOrEmpty(executablePath))
+                        continue;
+
+                    if (!Path.GetFullPath(executablePath).StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
+                        continue;
+
+                    _logger.LogInformation("Killing MCP server process holding the binary (PID: {pid})", process.Id);
+                    process.Kill();
+                    process.WaitForExit(5000);
+                    killed++;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning("Could not kill MCP server process: {message}", ex.Message);
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+
+            if (killed > 0)
+            {
+                // The tracked handle (if any) now points at a dead process, and the persisted PID would
+                // make CheckExistingProcess re-attach to it after the next domain reload.
+                // CleanupProcess drops both and moves the status machine to Stopped.
+                CleanupProcess();
+            }
+
+            return killed;
         }
 
         /// <param name="unattended">
