@@ -21,7 +21,8 @@ namespace Feeder.MCP.Editor
         const string IgnoreHeader = "# Matrix MCP: per-machine files (the port derives from the project path)";
 
         const string ConfirmMessage =
-            "Prepare this machine for Matrix MCP:\n\n" +
+            "Turn Matrix MCP on for this project and prepare this machine:\n\n" +
+            "- Start the local server and connect the editor (Matrix does nothing until this runs)\n" +
             "- Ignore .mcp.json in .gitignore (its port differs per machine)\n" +
             "- Keep only the core MCP tools enabled to save tokens; tool-set-enabled-state turns more on when needed\n" +
             "- Write the Claude Code MCP config, then install or verify the Claude Code CLI (Node.js is installed with winget if missing)";
@@ -46,6 +47,8 @@ namespace Feeder.MCP.Editor
         {
             if (!EditorUtility.DisplayDialog(Title, ConfirmMessage, "Run", "Cancel"))
                 return;
+
+            MatrixActivation.Enable();
 
             var message = string.Join("\n\n", new[]
             {
@@ -133,7 +136,7 @@ namespace Feeder.MCP.Editor
         {
             var manager = UnityMcpPluginEditor.Instance.Tools;
             if (manager == null)
-                return "Tools: the MCP plugin is not running - open Tools > Feeder > Matrix AI Connector, then run setup again";
+                return "Tools: the MCP plugin is not running - open Tools > Feeder > Matrix Bridge, then run setup again";
 
             var tools = manager.GetAllTools().Where(tool => tool.Name != null).ToList();
             var registered = new HashSet<string>(tools.Select(tool => tool.Name!), StringComparer.OrdinalIgnoreCase);

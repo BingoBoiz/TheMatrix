@@ -1,6 +1,6 @@
 # TheMatrix
 
-The standalone development repository for **Feeder MCP (Matrix AI Connector)**,
+The standalone development repository for **Matrix Bridge**,
 a Unity Editor package that bundles its local MCP server and can be installed independently
 from FeederBase.
 
@@ -47,7 +47,7 @@ the project-root `.mcp.json` for Claude Code, and generates `.claude/skills`. No
 is needed for Claude Code.
 
 For other AI clients or to opt out of auto-configure, open
-**Tools > Feeder > Matrix AI Connector**.
+**Tools > Feeder > Matrix Bridge**.
 
 ## Repository layout
 

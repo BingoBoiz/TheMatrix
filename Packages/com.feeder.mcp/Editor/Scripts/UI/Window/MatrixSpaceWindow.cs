@@ -50,9 +50,11 @@ namespace Feeder.MCP.Editor.UI
         private MatrixRainRenderer? _matrixRain;
         private IMGUIContainer? _matrixRainContainer;
         private double _lastMatrixRainStep;
+        private bool _dormant;
 
         public static MatrixSpaceWindow ShowWindow()
         {
+            MatrixActivation.RequestWindow();
             var window = GetWindow<MatrixSpaceWindow>("Matrix Space");
             window.SetupWindowWithIcon();
             window.minSize = new Vector2(900, 500);
@@ -64,6 +66,10 @@ namespace Feeder.MCP.Editor.UI
         protected override void OnEnable()
         {
             base.OnEnable();
+            _dormant = MatrixActivation.CloseIfDormant(this);
+            if (_dormant)
+                return;
+
             // Re-applies the tab title + icon after domain reloads (ShowWindow only runs once).
             SetupWindowWithIcon();
 
@@ -77,6 +83,9 @@ namespace Feeder.MCP.Editor.UI
 
         private void OnDisable()
         {
+            if (_dormant)
+                return;
+
             ModelCatalogService.Updated -= RefreshAllModelDropdowns;
             MatrixSpaceReloadCoordinator.StateChanged -= OnReloadStateChanged;
             CaptureAllSessions();
@@ -85,6 +94,9 @@ namespace Feeder.MCP.Editor.UI
 
         public override void CreateGUI()
         {
+            if (_dormant)
+                return;
+
             TearDownUiBindings();
             try
             {
@@ -779,6 +791,9 @@ namespace Feeder.MCP.Editor.UI
 
         private void OnDestroy()
         {
+            if (_dormant)
+                return;
+
             ModelCatalogService.Updated -= RefreshAllModelDropdowns;
             MatrixSpaceReloadCoordinator.StateChanged -= OnReloadStateChanged;
             CaptureAllSessions();

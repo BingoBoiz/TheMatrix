@@ -132,7 +132,7 @@ namespace Feeder.MCP.Editor.UI.MatrixSpace
             });
             _modeDropdown = new DropdownField(ModeChoices, IndexOfMode(MatrixSpaceSettings.DefaultAgentMode))
             {
-                tooltip = "Agent mode. MANUAL: safe, Unity MCP tools only. PLAN: research and propose only. " +
+                tooltip = "Agent mode. MANUAL: safe, Unity tools only. PLAN: research and propose only. " +
                           "AUTO: the agent edits files and runs commands directly.",
             };
             _modeDropdown.AddToClassList("agent-pane-mode");

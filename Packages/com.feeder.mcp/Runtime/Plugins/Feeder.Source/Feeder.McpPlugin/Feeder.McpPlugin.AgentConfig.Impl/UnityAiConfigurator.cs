@@ -37,7 +37,7 @@ public sealed class UnityAiConfigurator : AiAgentConfigurator
 
 	protected override IReadOnlyList<ConfigurationSection> BuildTroubleshootingSections(AgentConfiguratorSettings settings, Consts.MCP.Server.TransportMethod transport, ILogger? logger)
 	{
-		return AiAgentConfigurator.TroubleshootingSection("- 'UserSettings/mcp.json' file must have no json syntax errors.", "- Open Unity AI settings window\n- Go to Edit > Project Settings > AI > MCP Servers\n- Click 'Restart ai-game-developer' button or check the status of the server.");
+		return AiAgentConfigurator.TroubleshootingSection("- 'UserSettings/mcp.json' file must have no json syntax errors.", "- Open Unity AI settings window\n- Go to Edit > Project Settings > AI > MCP Servers\n- Click 'Restart Feeder-MCP' button or check the status of the server.");
 	}
 }
 }

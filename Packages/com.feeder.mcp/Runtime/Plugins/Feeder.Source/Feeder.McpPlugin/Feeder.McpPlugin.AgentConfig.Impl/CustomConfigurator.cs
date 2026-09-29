@@ -59,15 +59,8 @@ public sealed class CustomConfigurator : AiAgentConfigurator
 		}
 		else
 		{
-			list.Add(ConfigurationItem.Description("1. (First time or after port/version changes) Setup and start the MCP server using Docker."));
-			list.Add(ConfigurationItem.ReadOnlyField(DockerCommands.SetupRun(settings)));
-			list.Add(ConfigurationItem.Description("2. (Next time) Start the MCP server using Docker."));
-			list.Add(ConfigurationItem.ReadOnlyField(DockerCommands.Run(settings)));
-			list.Add(ConfigurationItem.Description("3. Copy paste the json into your MCP Client to configure it."));
+			list.Add(ConfigurationItem.Description("Copy paste the json into your MCP Client to configure it."));
 			list.Add(ConfigurationItem.ReadOnlyField("{\"mcpServers\":{\"Feeder-MCP\":{\"type\":\"http\",\"url\":\"" + settings.Host + "\"}}}"));
-			list.Add(ConfigurationItem.Description("4. (Optional) Stop and remove the MCP server using Docker when you are done."));
-			list.Add(ConfigurationItem.ReadOnlyField(DockerCommands.Stop(settings)));
-			list.Add(ConfigurationItem.ReadOnlyField(DockerCommands.Remove(settings)));
 		}
 		return new ConfigurationSection[1]
 		{

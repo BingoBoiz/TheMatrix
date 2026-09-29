@@ -4,7 +4,7 @@ Status: Accepted — 2026-07-10
 
 ## Decision
 
-1. **MCP spec baseline: `2025-11-25`, with mandatory version negotiation.** The matrix advertises its preferred version at `initialize` and accepts any mutually supported version ≥ `2025-03-26`. The current upstream server negotiates `2025-06-18` (measured in Phase 0 baseline); clients on that version must keep working unchanged.
+1. **MCP spec baseline: `2025-11-25`, with mandatory version negotiation.** The matrix advertises its preferred version at `initialize` and accepts any mutually supported version ≥ `2025-03-26`. The previous server negotiates `2025-06-18` (measured in Phase 0 baseline); clients on that version must keep working unchanged.
 2. **Two client transports, one session model:**
    - *Streamable HTTP* at `http://127.0.0.1:<port>/mcp` — the primary transport. Session identified by `Mcp-Session-Id` header.
    - *stdio* via `Feeder.StdioShim` for clients that only speak stdio. The shim owns nothing but framing: it relays newline-delimited JSON-RPC between its stdio and the persistent matrix over local IPC, and exits when its stdin closes.

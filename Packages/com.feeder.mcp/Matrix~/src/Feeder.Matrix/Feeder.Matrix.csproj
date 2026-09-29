@@ -9,7 +9,7 @@
     <Company>Feeder</Company>
     <Product>Feeder MCP Server</Product>
     <AssemblyTitle>Feeder MCP Server</AssemblyTitle>
-    <Description>Local Model Context Protocol matrix for Matrix AI Connector and Unity.</Description>
+    <Description>Local Model Context Protocol matrix for Matrix Bridge and Unity.</Description>
     <Copyright>Copyright © 2026 Feeder</Copyright>
     <RepositoryUrl>https://github.com/BingoBoiz/TheMatrix</RepositoryUrl>
     <ServerGarbageCollection>false</ServerGarbageCollection>

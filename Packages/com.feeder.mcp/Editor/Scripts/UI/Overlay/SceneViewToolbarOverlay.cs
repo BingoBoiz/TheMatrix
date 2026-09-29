@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Feeder.MCP.Editor.UI
 {
-    [Overlay(typeof(SceneView), id: Id, displayName: "Feeder AI",
-        defaultDisplay = true,
+    [Overlay(typeof(SceneView), id: Id, displayName: "Matrix Bridge",
+        defaultDisplay = false,
         defaultDockZone = DockZone.TopToolbar,
         defaultDockPosition = DockPosition.Top,
         defaultDockIndex = 0,
@@ -20,6 +20,19 @@ namespace Feeder.MCP.Editor.UI
         private SceneViewToolbarOverlay() : base(OpenWindowButton.Id)
         {
             collapsedIcon = EditorAssetLoader.LoadAssetAtPath<Texture2D>(EditorAssetLoader.PackageLogoIcon);
+        }
+
+        public override void OnCreated()
+        {
+            if (!MatrixActivation.IsInUse)
+                EditorApplication.update += HideWhenDormant;
+        }
+
+        private void HideWhenDormant()
+        {
+            EditorApplication.update -= HideWhenDormant;
+            if (!MatrixActivation.IsInUse)
+                displayed = false;
         }
     }
 }

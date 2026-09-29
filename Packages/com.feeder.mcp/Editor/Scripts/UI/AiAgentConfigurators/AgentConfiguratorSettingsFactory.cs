@@ -1,6 +1,5 @@
 #nullable enable
 using AgentConfig = Feeder.McpPlugin.AgentConfig;
-using UnityConnectionMode = Feeder.MCP.ConnectionMode;
 
 namespace Feeder.MCP.Editor.UI
 {
@@ -26,11 +25,8 @@ namespace Feeder.MCP.Editor.UI
                 executableFullPath: McpServerManager.ExecutableFullPath,
                 port: UnityMcpPluginEditor.Port,
                 timeoutMs: UnityMcpPluginEditor.TimeoutMs,
-                host: UnityMcpPluginEditor.ConnectionMode == UnityConnectionMode.Custom
-                    ? McpServerManager.GetMcpEndpointUrl(UnityMcpPluginEditor.Host)
-                    : UnityMcpPluginEditor.Host,
+                host: McpServerManager.GetMcpEndpointUrl(UnityMcpPluginEditor.Host),
                 token: UnityMcpPluginEditor.Token,
-                connectionMode: MapConnectionMode(UnityMcpPluginEditor.ConnectionMode),
                 authOption: UnityMcpPluginEditor.AuthOption,
                 // Pass Unity's authoritative server identity explicitly so the shared module tracks
                 // McpServerManager's pin instead of silently coinciding with the shared library's own
@@ -38,15 +34,5 @@ namespace Feeder.MCP.Editor.UI
                 serverExecutableName: McpServerManager.ExecutableName,
                 serverVersion: McpServerManager.ServerVersion);
         }
-
-        /// <summary>
-        /// Maps Unity's <see cref="UnityConnectionMode"/> (<c>Custom</c> = local server / <c>Cloud</c>)
-        /// onto the shared <see cref="AgentConfig.ConnectionMode"/> (<c>Local</c> / <c>Cloud</c>).
-        /// Only <c>Cloud</c> changes auth behaviour (cloud always requires it); everything else is local.
-        /// </summary>
-        public static AgentConfig.ConnectionMode MapConnectionMode(UnityConnectionMode mode)
-            => mode == UnityConnectionMode.Cloud
-                ? AgentConfig.ConnectionMode.Cloud
-                : AgentConfig.ConnectionMode.Local;
     }
 }

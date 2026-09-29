@@ -1,0 +1,6 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:VisualElement class="mb-chip">
+        <ui:Label name="mb-chip-text" class="mb-chip__text" text="agent" picking-mode="Ignore" />
+        <ui:VisualElement name="mb-chip-mark" class="mb-chip__mark" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>

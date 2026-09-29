@@ -5,7 +5,7 @@ Status: Accepted — 2026-07-10
 ## Routing
 
 - One matrix serves **multiple Unity projects**. Each Unity editor registers with a `projectId` (stable hash of the project path) and a `unityInstanceId` (per-editor-process GUID).
-- **Default: one active editor instance per project.** If a second instance registers for the same `projectId`, the newer registration wins and the older link is marked stale (upstream behavior parity); a future flag may allow explicit multi-instance addressing.
+- **Default: one active editor instance per project.** If a second instance registers for the same `projectId`, the newer registration wins and the older link is marked stale (behavior parity with the previous server); a future flag may allow explicit multi-instance addressing.
 - MCP requests are routed to a project by the client's session binding (a session is bound to a project at connect time via endpoint path or configuration). Cross-project requests are rejected — project A must never receive project B's traffic.
 
 ## Execution scheduling (Unity side is single-threaded)

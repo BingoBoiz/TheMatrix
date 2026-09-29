@@ -15,9 +15,9 @@ namespace Feeder.MCP.Editor
 
         /// <summary>
         /// Writes the MCP config file for every agent with the auto-configure flag enabled
-        /// (default: Claude Code's project-root <c>.mcp.json</c>), so a freshly installed
-        /// package — or a clone at a new path, where the directory-derived port changed —
-        /// works without opening the connector window. Runs once per editor session
+        /// (default: Claude Code's project-root <c>.mcp.json</c>) once Matrix has been turned
+        /// on for the project, so the file keeps following the directory-derived port without
+        /// opening the Matrix Bridge window. Runs once per editor session
         /// (SessionState survives domain reloads); Configure() is idempotent so the
         /// unconditional write self-heals stale ports.
         /// </summary>
@@ -26,9 +26,6 @@ namespace Feeder.MCP.Editor
             try
             {
                 if (Application.isBatchMode || EnvironmentUtils.IsCi())
-                    return;
-                // Cloud configs can embed tokens; never auto-write those into project files.
-                if (UnityMcpPluginEditor.ConnectionMode == ConnectionMode.Cloud)
                     return;
 
                 if (SessionState.GetBool(AutoConfigureSessionKey, false))
@@ -53,7 +50,7 @@ namespace Feeder.MCP.Editor
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "MCP agent auto-configure failed; editor load is unaffected. Configure manually via Tools/Feeder/Matrix AI Connector.");
+                _logger.LogError(e, "MCP agent auto-configure failed; editor load is unaffected. Wire the agent manually in Tools/Feeder/Matrix Bridge.");
             }
         }
     }

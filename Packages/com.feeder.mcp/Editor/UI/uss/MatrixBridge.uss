@@ -1,0 +1,188 @@
+.mb-root {
+    flex-grow: 1;
+    overflow: hidden;
+    background-color: rgb(2, 6, 4);
+    color: rgb(146, 238, 166);
+}
+
+.mb-rain {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.mb-menu {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    height: 18px;
+    padding: 0 4px;
+    margin: 0;
+    font-size: 14px;
+    letter-spacing: 3px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(63, 143, 93);
+    transition-property: color;
+    transition-duration: 0.18s;
+}
+
+.mb-menu:hover {
+    color: rgb(0, 255, 65);
+}
+
+.mb-core {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 44px;
+    justify-content: center;
+    align-items: center;
+}
+
+.mb-kicker {
+    margin: 0 0 8px 0;
+    font-size: 10px;
+    letter-spacing: 6px;
+    -unity-text-align: middle-center;
+    color: rgb(63, 143, 93);
+    text-shadow: 0 0 5px rgba(2, 6, 4, 0.95);
+}
+
+.mb-state {
+    margin: 0;
+    padding: 2px 14px 2px 22px;
+    font-size: 26px;
+    letter-spacing: 8px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    transition-property: color, scale;
+    transition-duration: 0.25s, 0.15s;
+}
+
+.mb-state:hover {
+    scale: 1.04 1.04;
+}
+
+.mb-state--offline {
+    color: rgb(75, 122, 94);
+    text-shadow: 0 0 6px rgba(2, 6, 4, 0.95);
+}
+
+.mb-state--linking {
+    color: rgb(184, 255, 176);
+    text-shadow: 0 0 6px rgba(2, 6, 4, 0.95);
+}
+
+.mb-state--online {
+    color: rgb(0, 255, 65);
+    text-shadow: 0 0 12px rgba(0, 255, 65, 0.65);
+}
+
+.mb-state--fault {
+    color: rgb(255, 124, 96);
+    text-shadow: 0 0 6px rgba(2, 6, 4, 0.95);
+}
+
+.mb-address {
+    margin: 10px 0 0 0;
+    font-size: 12px;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+    color: rgb(79, 174, 120);
+    text-shadow: 0 0 5px rgba(2, 6, 4, 0.95);
+}
+
+.mb-port {
+    width: 110px;
+    margin: 8px 0 0 0;
+}
+
+.mb-port .unity-base-text-field__input {
+    background-color: rgba(2, 27, 11, 0.85);
+    color: rgb(176, 255, 196);
+    border-width: 0 0 1px 0;
+    border-color: rgb(0, 255, 65);
+    border-radius: 0;
+    -unity-text-align: middle-center;
+}
+
+.mb-note {
+    display: none;
+    margin: 6px 0 0 0;
+    min-height: 12px;
+    max-width: 92%;
+    white-space: normal;
+    font-size: 10px;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+    color: rgb(255, 209, 99);
+    text-shadow: 0 0 5px rgba(2, 6, 4, 0.95);
+}
+
+.mb-note--visible {
+    display: flex;
+}
+
+.mb-chips {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 14px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.mb-chip {
+    align-items: center;
+    margin: 0 4px 4px 4px;
+    padding: 3px 4px 9px 4px;
+    opacity: 0.5;
+    transition-property: opacity;
+    transition-duration: 0.18s;
+}
+
+.mb-chip:hover {
+    opacity: 0.85;
+}
+
+.mb-chip--more {
+    opacity: 0.35;
+}
+
+.mb-chip--wired,
+.mb-chip--stale {
+    opacity: 1;
+}
+
+.mb-chip__text {
+    margin: 0;
+    padding: 0;
+    font-size: 12px;
+    color: rgb(146, 238, 166);
+    text-shadow: 0 0 5px rgba(2, 6, 4, 0.95);
+}
+
+.mb-chip__mark {
+    display: none;
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    width: 14px;
+    height: 2px;
+    margin-left: -7px;
+    background-color: rgb(0, 255, 65);
+}
+
+.mb-chip--wired .mb-chip__mark {
+    display: flex;
+}
+
+.mb-chip--stale .mb-chip__mark {
+    display: flex;
+    background-color: rgb(255, 193, 64);
+}

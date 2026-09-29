@@ -14,16 +14,16 @@ namespace Feeder.MCP.Editor.UI
 
         public OpenWindowButton()
         {
-            text = "Feeder AI";
+            text = "Matrix Bridge";
             icon = EditorAssetLoader.LoadAssetAtPath<Texture2D>(EditorAssetLoader.PackageLogoIcon);
-            tooltip = "Open Feeder Matrix AI Connector window";
-            clicked += MainWindowEditor.ShowWindowVoid;
+            tooltip = "Open Matrix Bridge";
+            clicked += MatrixBridgeWindow.ShowWindowVoid;
             RegisterCallback<DetachFromPanelEvent>(OnDetachFromPanel);
         }
 
         private void OnDetachFromPanel(DetachFromPanelEvent evt)
         {
-            clicked -= MainWindowEditor.ShowWindowVoid;
+            clicked -= MatrixBridgeWindow.ShowWindowVoid;
         }
     }
 }

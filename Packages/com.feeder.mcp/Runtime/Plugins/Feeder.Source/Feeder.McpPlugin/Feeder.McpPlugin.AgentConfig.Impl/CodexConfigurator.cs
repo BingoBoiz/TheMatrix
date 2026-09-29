@@ -8,7 +8,7 @@ namespace Feeder.McpPlugin.AgentConfig.Impl
 {
 public sealed class CodexConfigurator : AiAgentConfigurator
 {
-	private const string EnvVarNameAuthToken = "GAME_DEV_AUTH_TOKEN";
+	private const string EnvVarNameAuthToken = "FEEDER_MCP_AUTH_TOKEN";
 
 	private const string EnvVarNameBearerToken = "bearer_token_env_var";
 
@@ -57,7 +57,7 @@ public sealed class CodexConfigurator : AiAgentConfigurator
 		TomlAiAgentConfig tomlAiAgentConfig = (config as TomlAiAgentConfig) ?? throw new InvalidCastException("Expected TomlAiAgentConfig for Codex HTTP configuration but got " + config.GetType().Name);
 		if (settings.IsHttpAuthRequired && !string.IsNullOrEmpty(settings.Token))
 		{
-			tomlAiAgentConfig.SetProperty("bearer_token_env_var", "GAME_DEV_AUTH_TOKEN", requiredForConfiguration: true);
+			tomlAiAgentConfig.SetProperty("bearer_token_env_var", "FEEDER_MCP_AUTH_TOKEN", requiredForConfiguration: true);
 		}
 		else
 		{
@@ -71,16 +71,16 @@ public sealed class CodexConfigurator : AiAgentConfigurator
 		string text2 = "codex mcp add Feeder-MCP --url " + settings.Host;
 		if (settings.IsHttpAuthRequired)
 		{
-			text += " --bearer-token-env-var=GAME_DEV_AUTH_TOKEN";
-			text2 += " --bearer-token-env-var=GAME_DEV_AUTH_TOKEN";
+			text += " --bearer-token-env-var=FEEDER_MCP_AUTH_TOKEN";
+			text2 += " --bearer-token-env-var=FEEDER_MCP_AUTH_TOKEN";
 		}
 		if (transport != Consts.MCP.Server.TransportMethod.stdio)
 		{
 			List<ConfigurationItem> list = new List<ConfigurationItem>();
 			if (settings.IsHttpAuthRequired)
 			{
-				list.Add(ConfigurationItem.Warning("Authorization is enabled. Set the 'GAME_DEV_AUTH_TOKEN' environment variable before starting Codex in terminal."));
-				list.Add(settings.IsWindows ? ConfigurationItem.ReadOnlyField("setx GAME_DEV_AUTH_TOKEN \"" + settings.Token + "\"") : ConfigurationItem.ReadOnlyField("export GAME_DEV_AUTH_TOKEN=\"" + settings.Token + "\""));
+				list.Add(ConfigurationItem.Warning("Authorization is enabled. Set the 'FEEDER_MCP_AUTH_TOKEN' environment variable before starting Codex in terminal."));
+				list.Add(settings.IsWindows ? ConfigurationItem.ReadOnlyField("setx FEEDER_MCP_AUTH_TOKEN \"" + settings.Token + "\"") : ConfigurationItem.ReadOnlyField("export FEEDER_MCP_AUTH_TOKEN=\"" + settings.Token + "\""));
 			}
 			list.Add(ConfigurationItem.Description("1. Open a terminal and run the following command to be in the project folder"));
 			list.Add(ConfigurationItem.ReadOnlyField("cd \"" + settings.ProjectRootPath + "\""));

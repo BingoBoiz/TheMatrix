@@ -5,14 +5,14 @@
 //
 //   Outbound: always emitted as a JSON string (via WriteStringValue).
 //   Inbound:  accepts both a JSON string (preferred) and a JSON number
-//             (back-compat — legacy clients pre-#759 wrote a number).
+//             (back-compat - older clients wrote a number).
 //
 // Rationale: Unity 6.5's EntityId is a 64-bit ulong. JS-based MCP clients
 // (Claude Agent SDK, etc.) parse JSON numbers as IEEE-754 doubles, so any
 // value past 2^53 - 1 rounds. Serializing as a string makes the value
 // opaque to every JSON parser, preserving full precision through any
 // language boundary. This is the same pattern used by Twitter, YouTube,
-// Discord, Stripe, and gRPC-JSON for 64-bit IDs. See #759 / #754.
+// Discord, Stripe, and gRPC-JSON for 64-bit IDs.
 
 #nullable enable
 #if UNITY_6000_5_OR_NEWER
@@ -64,7 +64,7 @@ namespace Feeder.MCP.JsonConverters
                 // Reject empty string up-front: the schema regex "^[0-9]+$" requires
                 // one or more digits, but EntityIdUtils.FromString("") returns
                 // EntityId.None silently. Throw here so the runtime matches the
-                // published schema (see #759 wire contract at top-of-file).
+                // published schema (see the wire contract at top-of-file).
                 if (string.IsNullOrEmpty(stringValue))
                     throw new JsonException($"{nameof(EntityId)} string must be one or more decimal digits, got empty string.");
                 return EntityIdUtils.FromString(stringValue);

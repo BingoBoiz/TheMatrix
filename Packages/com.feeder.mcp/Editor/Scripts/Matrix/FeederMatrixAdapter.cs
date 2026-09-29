@@ -408,7 +408,7 @@ namespace Feeder.MCP.Editor.Matrix
 
         /// <summary>
         /// Forwards the matrix's MCP client set into <c>McpManager</c> so the plugin's client
-        /// observables (and the "AI agent" indicator in the connector window) reflect reality.
+        /// observables (and the "AI agent" indicator in the Matrix Bridge window) reflect reality.
         /// </summary>
         void PublishMcpClients(McpClientInfo[]? clients)
         {

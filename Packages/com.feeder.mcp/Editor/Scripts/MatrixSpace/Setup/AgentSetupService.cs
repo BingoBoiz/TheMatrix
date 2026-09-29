@@ -53,6 +53,8 @@ namespace Feeder.MCP.Editor.MatrixSpace.Setup
             if (_running || presets.Count == 0)
                 return;
 
+            MatrixActivation.Enable();
+
             var ui = SynchronizationContext.Current;
             _running = true;
 

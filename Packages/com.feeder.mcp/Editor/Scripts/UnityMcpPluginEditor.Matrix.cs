@@ -11,20 +11,17 @@ namespace Feeder.MCP
     {
         FeederMatrixAdapter? _matrixAdapter;
 
-        bool UsesLocalMatrix => unityConnectionConfig.ConnectionMode == ConnectionMode.Custom;
         FeederMatrixAdapter MatrixAdapter => _matrixAdapter ??= new FeederMatrixAdapter(this);
 
         internal void ConfigureMatrixTransport()
         {
-            ConnectTransportOverride = () => UsesLocalMatrix
-                ? MatrixAdapter.ConnectAsync()
-                : ConnectDefaultTransport();
-            DisconnectTransportOverride = () => UsesLocalMatrix && _matrixAdapter != null
+            ConnectTransportOverride = () => MatrixAdapter.ConnectAsync();
+            DisconnectTransportOverride = () => _matrixAdapter != null
                 ? _matrixAdapter.DisconnectAsync()
                 : DisconnectDefaultTransport();
             DisconnectImmediateTransportOverride = () =>
             {
-                if (UsesLocalMatrix && _matrixAdapter != null)
+                if (_matrixAdapter != null)
                 {
                     _matrixAdapter.Dispose();
                     _matrixAdapter = null;
@@ -35,9 +32,8 @@ namespace Feeder.MCP
                     DisconnectImmediateDefaultTransport();
                 }
             };
-            NotifyCompletedTransportOverride = (request, cancellationToken) => UsesLocalMatrix
-                ? MatrixAdapter.CompleteDeferredAsync(request, cancellationToken)
-                : NotifyToolRequestCompletedDefaultTransport(request, cancellationToken);
+            NotifyCompletedTransportOverride = (request, cancellationToken) =>
+                MatrixAdapter.CompleteDeferredAsync(request, cancellationToken);
         }
 
         internal void SetMatrixConnectionState(HubConnectionState state) => _connectionState.Value = state;

@@ -2,7 +2,7 @@
 
 Status: Draft accepted for implementation — 2026-07-10
 
-FMP is the private protocol between the **Feeder Unity Adapter** (inside the editor) and the **Feeder Local Matrix**. It is *not* MCP: MCP terminates at the matrix; FMP is our own contract, versioned independently of the legacy upstream SignalR hub contract (which we deliberately do not clone).
+FMP is the private protocol between the **Feeder Unity Adapter** (inside the editor) and the **Feeder Local Matrix**. It is *not* MCP: MCP terminates at the matrix; FMP is our own contract, versioned independently of the previous server's SignalR hub contract (which we deliberately do not clone).
 
 - Transport: SignalR over WebSocket only, `http://127.0.0.1:<port>/fmp`.
 - Wire format: MessagePack (SignalR MessagePack hub protocol).

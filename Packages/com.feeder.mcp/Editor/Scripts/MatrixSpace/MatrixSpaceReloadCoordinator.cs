@@ -31,6 +31,8 @@ namespace Feeder.MCP.Editor.MatrixSpace
         internal static bool IsAssemblyReloadLockedByMatrix => _assembliesLocked;
         internal static int LockGeneration => _lockGeneration;
 
+        private static bool Quiet => ActiveLeases.Count == 0 && !MatrixActivation.IsInUse;
+
         static MatrixSpaceReloadCoordinator()
         {
             CompilationPipeline.compilationStarted += OnCompilationStarted;
@@ -93,6 +95,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
         private static void OnCompilationStarted(object context)
         {
             _compilationHadErrors = false;
+            if (Quiet)
+                return;
+
             Debug.Log($"[MatrixSpaceReload] Script compilation started; {ActiveLeases.Count} active turn(s).");
         }
 
@@ -111,6 +116,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
         private static void OnCompilationFinished(object context)
         {
             _reloadPending = !_compilationHadErrors && ActiveLeases.Count > 0;
+            if (Quiet)
+                return;
+
             Debug.Log($"[MatrixSpaceReload] Script compilation finished; errors={_compilationHadErrors}, " +
                       $"reloadPending={_reloadPending}, activeTurns={ActiveLeases.Count}.");
             RaiseStateChanged();
@@ -133,6 +141,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         private static void OnBeforeAssemblyReload()
         {
+            if (Quiet)
+                return;
+
             // A normal Matrix Space reload reaches this point only after all leases are gone.
             // Persist defensively in case Unity or another extension forced a reload.
             MatrixSpaceSessionStore.instance.PersistNow();
@@ -143,6 +154,9 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         private static void OnEditorQuitting()
         {
+            if (Quiet)
+                return;
+
             MatrixSpaceSessionStore.instance.PersistNow();
             ActiveLeases.Clear();
 

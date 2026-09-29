@@ -20,7 +20,7 @@ public abstract class AiAgentConfigurator
 
 	public virtual string TutorialUrl => string.Empty;
 
-	public virtual string TutorialLinkLabel => "YouTube Tutorial";
+	public virtual string TutorialLinkLabel => "Tutorial";
 
 	public virtual string DownloadLinkLabel => "Download";
 

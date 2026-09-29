@@ -70,7 +70,7 @@ namespace Feeder.MCP.Editor
         public static ReadOnlyReactiveProperty<McpServerStatus> ServerStatus => _serverStatus;
 
         /// <summary>
-        /// Last server-binary install failure reason (null when none). The Matrix AI Connector window
+        /// Last server-binary install failure reason (null when none). The Matrix Bridge window
         /// subscribes to surface the failure + a retry button instead of silently dead-ending.
         /// </summary>
         public static ReadOnlyReactiveProperty<string?> LastInstallError => _lastInstallError;
@@ -90,6 +90,12 @@ namespace Feeder.MCP.Editor
             // Register for editor quit to clean up the server process
             EditorApplication.quitting += OnEditorQuitting;
 
+            if (MatrixActivation.IsEnabled)
+                Activate();
+        }
+
+        internal static void Activate()
+        {
             // Check if server process is still running (e.g., after domain reload)
             EditorApplication.update += CheckExistingProcess;
 
@@ -238,8 +244,8 @@ namespace Feeder.MCP.Editor
             if (binaryVersion == null)
                 return false;
 
-            // Compared against the pinned shared-server version, NOT the plugin version —
-            // the cached binary is a GameDev-MCP-Server release.
+            // Compared against the pinned server version, NOT the plugin version -
+            // the cached binary is a server release with its own version number.
             return binaryVersion == ServerVersion;
         }
 
@@ -248,7 +254,7 @@ namespace Feeder.MCP.Editor
         /// user to retry/skip if the folder can't be deleted (e.g. the server is still holding a file lock).
         /// When false (the unattended <c>[InitializeOnLoad]</c> / package-update download path) the blocking
         /// dialog is SKIPPED — after the silent retries the failure is rethrown so the caller surfaces it via the
-        /// non-modal failure popup + retry button instead of freezing editor startup behind a modal (issue #845).
+        /// non-modal failure popup + retry button instead of freezing editor startup behind a modal.
         /// </param>
         public static bool DeleteBinaryFolderIfExists(bool interactive = true)
         {
@@ -320,7 +326,7 @@ namespace Feeder.MCP.Editor
                         }
 
                         // Unattended path: never block startup behind a modal — rethrow so the caller
-                        // surfaces the failure via the non-modal popup + retry button (issue #845).
+                        // surfaces the failure via the non-modal popup + retry button.
                         if (!interactive)
                         {
                             UnityEngine.Debug.LogError(
@@ -530,7 +536,7 @@ namespace Feeder.MCP.Editor
 
                 UnityEngine.Debug.Log($"Installed MCP server binary to: <color=green>{ExecutableFullPath}</color>");
 
-                if (previousKeepServerRunning && IsAutoStartAllowedForMode(UnityMcpPluginEditor.ConnectionMode))
+                if (previousKeepServerRunning)
                 {
                     // StartServer() moves the status machine Installing -> Starting. If it early-returns
                     // false it never wrote Starting, so the status is still Installing — reset it to
@@ -543,8 +549,6 @@ namespace Feeder.MCP.Editor
                 }
                 else
                 {
-                    if (previousKeepServerRunning)
-                        _logger.LogDebug("InstallServerBinary: Cloud mode active, skipping local server auto-start after binary install");
                     ResetInstallingToStopped();
                 }
 
@@ -1452,17 +1456,6 @@ namespace Feeder.MCP.Editor
         }
 
         /// <summary>
-        /// Returns true when the local MCP server may be auto-started for the given connection mode.
-        /// Only Custom mode targets the local server, so auto-start is allowed there (subject to
-        /// other gates such as <see cref="UnityMcpPluginEditor.KeepServerRunning"/>). Every other
-        /// mode (Cloud today, plus any future addition) connects to a remote endpoint and must
-        /// never auto-start the local server on Editor launch or after a binary update.
-        /// Pure (no Unity API access) so it can be unit-tested in EditMode.
-        /// </summary>
-        public static bool IsAutoStartAllowedForMode(ConnectionMode mode)
-            => mode == ConnectionMode.Custom;
-
-        /// <summary>
         /// Starts the MCP server if KeepServerRunning is enabled and no external server is detected.
         /// This method is called during Unity Editor startup to auto-start the server based on user preference.
         /// The external server check is performed asynchronously to avoid blocking the main thread.
@@ -1470,13 +1463,6 @@ namespace Feeder.MCP.Editor
         public static void StartServerIfNeeded()
         {
             EditorApplication.update -= StartServerIfNeeded;
-
-            // Skip local server auto-start in Cloud mode — Unity connects to the cloud server instead
-            if (!IsAutoStartAllowedForMode(UnityMcpPluginEditor.ConnectionMode))
-            {
-                _logger.LogDebug("StartServerIfNeeded: Cloud mode active, skipping local server auto-start");
-                return;
-            }
 
             // Check if user wants the server to keep running
             if (!UnityMcpPluginEditor.KeepServerRunning)

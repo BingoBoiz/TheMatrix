@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using Feeder.MCP.Editor.UI;
 using AiAgentConfiguratorRegistry = Feeder.McpPlugin.AgentConfig.AiAgentConfiguratorRegistry;
-using UnityConnectionMode = Feeder.MCP.ConnectionMode;
 using static Feeder.McpPlugin.Common.Consts.MCP.Server;
 
 namespace Feeder.MCP.Editor.MatrixSpace.Setup
@@ -31,13 +30,6 @@ namespace Feeder.MCP.Editor.MatrixSpace.Setup
         {
             try
             {
-                // Cloud configs can embed tokens; never auto-write those (mirrors Startup guard).
-                if (UnityMcpPluginEditor.ConnectionMode == UnityConnectionMode.Cloud)
-                {
-                    ctx.Log("Cloud connection mode — skipping MCP config write.");
-                    return true;
-                }
-
                 var configurator = AiAgentConfiguratorRegistry.GetByAgentId(configuratorId);
                 if (configurator == null)
                 {

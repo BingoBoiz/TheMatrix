@@ -18,33 +18,19 @@ public sealed class AgentConfiguratorSettings
 
 	public string? Token { get; }
 
-	public ConnectionMode ConnectionMode { get; }
-
 	public Consts.MCP.Server.AuthOption AuthOption { get; }
 
 	public string ServerExecutableName { get; }
 
 	public string ServerVersion { get; }
 
-	public string DockerImage { get; }
-
-	public bool IsHttpAuthRequired
-	{
-		get
-		{
-			if (ConnectionMode != ConnectionMode.Cloud)
-			{
-				return AuthOption == Consts.MCP.Server.AuthOption.required;
-			}
-			return true;
-		}
-	}
+	public bool IsHttpAuthRequired => AuthOption == Consts.MCP.Server.AuthOption.required;
 
 	public bool IsStdioAuthRequired => AuthOption == Consts.MCP.Server.AuthOption.required;
 
 	public bool IsWindows => OperatingSystem == OperatingSystemKind.Windows;
 
-	public AgentConfiguratorSettings(OperatingSystemKind operatingSystem, string projectRootPath, string executableFullPath, int port, int timeoutMs, string host, string? token = null, ConnectionMode connectionMode = ConnectionMode.Local, Consts.MCP.Server.AuthOption authOption = Consts.MCP.Server.AuthOption.none, string serverExecutableName = "gamedev-mcp-server", string serverVersion = "8.0.0", string dockerImage = "aigamedeveloper/mcp-server")
+	public AgentConfiguratorSettings(OperatingSystemKind operatingSystem, string projectRootPath, string executableFullPath, int port, int timeoutMs, string host, string? token = null, Consts.MCP.Server.AuthOption authOption = Consts.MCP.Server.AuthOption.none, string serverExecutableName = "gamedev-mcp-server", string serverVersion = "")
 	{
 		OperatingSystem = operatingSystem;
 		ProjectRootPath = projectRootPath;
@@ -53,16 +39,14 @@ public sealed class AgentConfiguratorSettings
 		TimeoutMs = timeoutMs;
 		Host = host;
 		Token = token;
-		ConnectionMode = connectionMode;
 		AuthOption = authOption;
 		ServerExecutableName = serverExecutableName;
 		ServerVersion = serverVersion;
-		DockerImage = dockerImage;
 	}
 
-	public static AgentConfiguratorSettings CreateForHost(string projectRootPath, string executableFullPath, int port, int timeoutMs, string host, string? token = null, ConnectionMode connectionMode = ConnectionMode.Local, Consts.MCP.Server.AuthOption authOption = Consts.MCP.Server.AuthOption.none, string serverExecutableName = "gamedev-mcp-server", string serverVersion = "8.0.0", string dockerImage = "aigamedeveloper/mcp-server")
+	public static AgentConfiguratorSettings CreateForHost(string projectRootPath, string executableFullPath, int port, int timeoutMs, string host, string? token = null, Consts.MCP.Server.AuthOption authOption = Consts.MCP.Server.AuthOption.none, string serverExecutableName = "gamedev-mcp-server", string serverVersion = "")
 	{
-		return new AgentConfiguratorSettings(HostOperatingSystem.Detect(), projectRootPath, executableFullPath, port, timeoutMs, host, token, connectionMode, authOption, serverExecutableName, serverVersion, dockerImage);
+		return new AgentConfiguratorSettings(HostOperatingSystem.Detect(), projectRootPath, executableFullPath, port, timeoutMs, host, token, authOption, serverExecutableName, serverVersion);
 	}
 }
 }

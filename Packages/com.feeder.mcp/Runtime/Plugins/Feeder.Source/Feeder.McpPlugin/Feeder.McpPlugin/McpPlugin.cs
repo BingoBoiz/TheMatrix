@@ -249,7 +249,7 @@ public class McpPlugin : IMcpPlugin, IConnection, IDisposable
 		string? obj = basePath ?? _connectionConfig.ProjectRootPath;
 		if (string.IsNullOrEmpty(obj))
 		{
-			throw new InvalidOperationException("Cannot resolve relative SkillsPath '" + skillsPath + "': no basePath was supplied and ConnectionConfig.ProjectRootPath is not set. Host applications must either pass an explicit basePath to GenerateSkillFiles / DeleteSkillFiles, or set ConnectionConfig.ProjectRootPath at construction time. Silent fallback to Environment.CurrentDirectory has been removed to prevent skill files landing outside the host project (see GitHub issue #107).");
+			throw new InvalidOperationException("Cannot resolve relative SkillsPath '" + skillsPath + "': no basePath was supplied and ConnectionConfig.ProjectRootPath is not set. Host applications must either pass an explicit basePath to GenerateSkillFiles / DeleteSkillFiles, or set ConnectionConfig.ProjectRootPath at construction time. Silent fallback to Environment.CurrentDirectory has been removed to prevent skill files landing outside the host project.");
 		}
 		return Path.GetFullPath(Path.Combine(obj, skillsPath));
 	}

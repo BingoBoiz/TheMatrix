@@ -7,7 +7,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
 {
     /// <summary>
     /// Persisted user settings for Matrix Space (PlayerPrefs-backed, same wrappers as the
-    /// rest of the connector UI).
+    /// rest of the package UI).
     /// </summary>
     public static class MatrixSpaceSettings
     {

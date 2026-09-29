@@ -74,11 +74,15 @@ namespace Feeder.MCP.Editor.UI
         private bool subscribedRebuilt;
         private bool glyphCacheDirty = true;
         private float cachedPpp = 1f;
+        private double paintedAt = -1d;
         private float cachedW = -1f;
         private float cachedH = -1f;
         private float localWidth;
         private float localHeight;
         private int rowsLocal = 1;
+
+        public float Energy { get; set; } = 1f;
+        public float CenterClear { get; set; }
 
         /// <summary>Monospace font shared with the window's UI styles.</summary>
         public Font UIFont
@@ -231,6 +235,8 @@ namespace Feeder.MCP.Editor.UI
             if (layers == null)
                 return;
 
+            dt *= Mathf.Clamp01(Energy);
+
             for (int l = 0; l < LayerCount; l++)
             {
                 layers[l].depth += DollySpeed * dt;
@@ -285,6 +291,18 @@ namespace Feeder.MCP.Editor.UI
             GUI.EndClip();
         }
 
+        public void Paint(Rect rect)
+        {
+            if (Event.current.type != EventType.Repaint || rect.width < 1f || rect.height < 1f)
+                return;
+
+            var now = EditorApplication.timeSinceStartup;
+            var dt = paintedAt < 0d ? 0f : Mathf.Clamp((float)(now - paintedAt), 0f, 0.1f);
+            paintedAt = now;
+            Step(dt);
+            Draw(rect.width, rect.height);
+        }
+
         private static float Smooth01(float x)
         {
             x = Mathf.Clamp01(x);
@@ -315,13 +333,16 @@ namespace Feeder.MCP.Editor.UI
             float lnScale = Mathf.Log(ScaleMax / ScaleMin);
             float halfLocalH = localHeight * 0.5f;
             int quads = 0;
+            float energyAlpha = Mathf.Lerp(0.18f, 1f, Mathf.Clamp01(Energy));
+            bool clearCenter = CenterClear > 0.001f;
 
             for (int li = 0; li < LayerCount; li++)
             {
                 RainLayer layer = layers[layerOrder[li]];
                 float depth = layer.depth;
                 float layerAlpha = Smooth01(depth / FadeInEnd)
-                                 * (1f - Smooth01((depth - FadeOutStart) / (1f - FadeOutStart)));
+                                 * (1f - Smooth01((depth - FadeOutStart) / (1f - FadeOutStart)))
+                                 * energyAlpha;
                 if (layerAlpha <= 0.01f)
                     continue;
 
@@ -368,14 +389,23 @@ namespace Feeder.MCP.Editor.UI
                         float baseline = sy + cellH * 0.8f;
                         float gy = baseline - ci.maxY * k; // GUI space is y-down
 
+                        float dim = 1f;
+                        if (clearCenter)
+                        {
+                            float nx = (sx + cellW * 0.5f - cx) / (width * 0.5f);
+                            float ny = (sy + cellH * 0.5f - cy) / (height * 0.5f);
+                            float d = Mathf.Sqrt(nx * nx / (0.66f * 0.66f) + ny * ny / (0.42f * 0.42f));
+                            dim = 1f - CenterClear * (1f - Smooth01(d));
+                        }
+
                         if (t == 0)
                         {
-                            GL.Color(head);
+                            GL.Color(new Color(head.r, head.g, head.b, head.a * dim));
                         }
                         else
                         {
                             float fade = 1f - (float)t / col.trail;
-                            GL.Color(new Color(tr, tg, tb, fade * fade * layerAlpha));
+                            GL.Color(new Color(tr, tg, tb, fade * fade * layerAlpha * dim));
                         }
 
                         // Use all four UV corners: glyphs can be rotated in the atlas.

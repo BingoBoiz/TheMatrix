@@ -52,7 +52,7 @@ namespace Feeder.MCP.JsonConverters
                 writer.WriteStartObject();
 
                 // Write the "instanceID" property — see EntityIdConverter
-                // top-of-file wire contract (#759): outbound is always a
+                // top-of-file wire contract: outbound is always a
                 // JSON string of decimal digits, never a number.
                 writer.WriteString(ObjectRef.ObjectRefProperty.InstanceID, "0");
 
@@ -62,7 +62,7 @@ namespace Feeder.MCP.JsonConverters
 
             writer.WriteStartObject();
 
-            // Write the "instanceID" property (JSON string — see #759).
+            // Write the "instanceID" property (JSON string, see the top-of-file wire contract).
             writer.WriteString(ObjectRef.ObjectRefProperty.InstanceID, UnityEngine.EntityId.ToULong(value.InstanceID).ToString(CultureInfo.InvariantCulture));
 
             writer.WriteEndObject();

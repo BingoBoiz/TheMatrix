@@ -1,8 +1,8 @@
-# Review + Kế hoạch sửa: tùy chọn DeepSeek trong Matrix AI Connector
+# Review + Kế hoạch sửa: tùy chọn DeepSeek trong Matrix Bridge
 
 Status: Draft — 2026-08-26
 Scope: mọi thay đổi trong working tree phục vụ việc thêm agent **DeepSeek** (configurator, catalog,
-backend preset, defaults, và phần port DLL → source đi kèm).
+backend preset, defaults, và phần source plugin đi kèm).
 Related: ADR-0002 (MCP versioning & transports), ADR-0005 (security), `research/00-dsh-ground-truth.md`
 
 ---
@@ -28,7 +28,7 @@ và **4 nhóm polish** cần xử lý trước khi commit.
 | `IconName = ""` không làm vỡ UI | `AiAgentConfiguratorView.SetAgentIcon()` ẩn slot khi rỗng |
 | Stdio args khớp semantics của `AgentConfigBuilders.StdioArgs` | `AuthOption` enum vốn đã lowercase → `ToLowerInvariant()` là no-op vô hại |
 | Troubleshooting nói đúng sự thật "DSH does not read .mcp.json" | `dsh-mcp-client` chỉ đọc config plugin từ `cordis.yml` — verified |
-| Port DLL → source compile sạch | `Library/ScriptAssemblies/Feeder.McpPlugin.dll` (325 KB) build từ source |
+| `Feeder.Source` compile sạch | `Library/ScriptAssemblies/Feeder.McpPlugin.dll` (325 KB) build từ source |
 
 ---
 
@@ -122,18 +122,17 @@ mà không khôi phục.
 ### P1-3. Lý do tồn tại của `AiAgentCatalog` đã hết hiệu lực
 
 Doc comment của `AiAgentCatalog` / `DeepSeekAiAgentConfigurator` viết: *"the shared registry compiled
-into Feeder.McpPlugin.dll has no runtime registration API"*. Nhưng cùng đợt thay đổi này đã **thay
-3 DLL bằng source** (`Runtime/Plugins/Feeder.Source/`), nên registry giờ là file source sửa được:
+into Feeder.McpPlugin.dll has no runtime registration API"*. Nhưng cùng đợt thay đổi này đã **đưa
+registry vào source** (`Runtime/Plugins/Feeder.Source/`), nên registry giờ là file source sửa được:
 `.../Feeder.McpPlugin.AgentConfig/AiAgentConfiguratorRegistry.cs`.
 
 **Chọn 1 trong 2**:
 
 - **(a) Đăng ký thẳng** `new DeepSeekAiAgentConfigurator()` vào mảng registry — nhưng phải chuyển
   configurator xuống assembly `Feeder.McpPlugin`, mất tính "package-side extension" và làm
-  divergence với upstream lớn hơn khi re-port.
-- **(b) Giữ `AiAgentCatalog`** (khuyến nghị — cô lập divergence khỏi phần port) nhưng **sửa lại
-  doc comment** cho đúng sự thật: giữ ngoài registry *có chủ đích* để phần port ở lại 1:1 với DLL
-  gốc, dễ re-port khi upstream đổi.
+  registry dùng chung phình to hơn.
+- **(b) Giữ `AiAgentCatalog`** (khuyến nghị — cô lập phần thêm khỏi registry dùng chung) nhưng **sửa lại
+  doc comment** cho đúng sự thật: giữ ngoài registry *có chủ đích* để registry dùng chung không bị sửa.
 
 ### P1-4. Thứ tự dropdown phá quy ước alphabet
 
@@ -154,15 +153,15 @@ trong UI khuyết so với mọi entry khác.
 ### P1-6. Thiếu CHANGELOG + version bump
 
 `Packages/com.feeder.mcp/CHANGELOG.md` ghi từng version; `package.json` vẫn `0.85.0` trong khi
-working tree chứa: agent mới, port 3 DLL → source, đổi asmdef references, đổi default config.
+working tree chứa: agent mới, source plugin trong package, đổi asmdef references, đổi default config.
 
 **Fix**: bump `0.86.0` + entry CHANGELOG gồm 3 mục: (1) DeepSeek agent + `.agents/skills`,
-(2) 3 plugin DLL thay bằng source biên dịch trong package, (3) thay đổi default
+(2) source plugin biên dịch trong package, (3) thay đổi default
 `AgentAutoConfigure` / `SkillAutoGenerate` (nếu giữ).
 
 ### P1-7. Hygiene: 344 MB rác chưa bị ignore
 
-`research/` (decompiled + 3 upstream clone + `port-build`) = **344 MB**, và
+`research/` (tài liệu phân tích + bản build thử) = **344 MB**, và
 `PLAN-DeepSeek-Matrix-Review.md` ở root — cả hai **không** nằm trong `.gitignore` → `git add -A`
 sẽ nuốt hết vào repo.
 
@@ -173,15 +172,14 @@ sẽ nuốt hết vào repo.
   (chính là chỗ file này đang nằm).
 - Commit 5 skill mới `.agents/skills/ui-inspect-*` cùng đợt.
 
-### P1-8. Licensing của source đã port
+### P1-8. Licensing của source đóng gói
 
-`Feeder.Source/` (293 file, ~22.7k LOC) là **decompile từ DLL đã ship**; `research/upstream-src`
-cho thấy nguồn gốc upstream (Unity-MCP / ReflectorNet / MCP-Plugin-dotnet). `LICENSE.md` của package
-là MIT "Copyright (c) 2026 Feeder", **không có NOTICE / attribution cho bên thứ ba**.
+`Feeder.Source/` (293 file, ~22.7k LOC) được biên dịch trực tiếp trong package. `LICENSE.md` của package
+là MIT "Copyright (c) 2026 Feeder".
 
-**Fix (bắt buộc trước khi publish)**: xác nhận license upstream, thêm `THIRD-PARTY-NOTICES.md`
-(hoặc header per-folder) ghi rõ nguồn + license gốc cho 3 assembly đã port. Đây là quyết định
-pháp lý — cần The Architect chốt, không tự làm.
+**Fix (bắt buộc trước khi publish)**: rà soát nguồn và giấy phép của mọi source đóng gói, thêm
+`THIRD-PARTY-NOTICES.md` (hoặc header per-folder) nếu cần. Đây là quyết định pháp lý — cần The
+Architect chốt, không tự làm.
 
 ### P1-9. `.mcp.json` bị thêm BOM
 
@@ -218,8 +216,8 @@ Diff duy nhất của `.mcp.json` là thêm `\ufeff` ở đầu file. Package gh
 ## 6. Kiểm chứng sau mỗi lô
 
 - `assets-refresh` → `console-get-logs` (filter Error) — bắt buộc sau mọi thay đổi C#.
-- Mở **Tools > Feeder > Matrix AI Connector**: DeepSeek xuất hiện đúng vị trí alphabet, có icon,
-  Configure/Remove chạy; đổi transport stdio↔http rồi **đọc lại `.mcp.json`** xác nhận không còn key thừa.
+- Mở **Tools > Feeder > Matrix Bridge**: chip `deepseek` hiển thị; bấm chip để nối/gỡ chạy đúng và
+  **đọc lại `.mcp.json`** xác nhận mục được ghi/xóa tương ứng, không còn key thừa.
 - Matrix Space: tạo pane backend "DeepSeek CLI", gửi 1 prompt, xác nhận `dsh --profile headless`
   trả kết quả (không còn lỗi `--profile <name> is required`).
 - `unity-skill-generate` cho cả 2 path → `diff -r .agents/skills .claude/skills` phải rỗng.
@@ -229,5 +227,5 @@ Diff duy nhất của `.mcp.json` là thêm `\ufeff` ở đầu file. Package gh
 
 - Code DeepSeek: xóa 2 file trong `Editor/Scripts/UI/AiAgentConfigurators/`, revert
   `MainWindowEditor.AiAgents.cs`, `Startup*.cs`, `UnityMcpPlugin.Config.cs`, `AgentBackendCatalog.cs`.
-- Source port: `git checkout -- Packages/com.feeder.mcp/Runtime/Plugins/Feeder/` (khôi phục 3 DLL),
+- Source plugin: `git checkout -- Packages/com.feeder.mcp/Runtime/Plugins/Feeder/` (khôi phục plugin trước đó),
   xóa `Runtime/Plugins/Feeder.Source/`, revert 2 asmdef.

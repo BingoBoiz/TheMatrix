@@ -16,7 +16,6 @@ using UnityEngine.SceneManagement;
 namespace Feeder.MCP.Editor.API
 {
     [AiToolType]
-    [InitializeOnLoad]
     public static partial class Tool_Tests
     {
         static readonly object _lock = new();
@@ -31,15 +30,6 @@ namespace Feeder.MCP.Editor.API
         const string PendingTestNamespaceKey = "Feeder_MCP_PendingTestRun_TestNamespace";
         const string PendingTestClassKey = "Feeder_MCP_PendingTestRun_TestClass";
         const string PendingTestMethodKey = "Feeder_MCP_PendingTestRun_TestMethod";
-
-        static Tool_Tests()
-        {
-            _testRunnerApi ??= CreateInstance();
-
-            // Check for pending test run that was deferred due to script recompilation + domain reload
-            if (HasPendingTestRun())
-                EditorApplication.update += ResumePendingTestRunOnce;
-        }
 
         public static TestRunnerApi TestRunnerApi
         {
@@ -82,7 +72,11 @@ namespace Feeder.MCP.Editor.API
 
         public static void Init()
         {
-            // none
+            _testRunnerApi ??= CreateInstance();
+
+            // Check for pending test run that was deferred due to script recompilation + domain reload
+            if (HasPendingTestRun())
+                EditorApplication.update += ResumePendingTestRunOnce;
         }
 
         static bool HasPendingTestRun()

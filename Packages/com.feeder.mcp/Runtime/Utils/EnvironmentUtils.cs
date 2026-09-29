@@ -37,8 +37,6 @@ namespace Feeder.MCP.Runtime.Utils
         public const string EnvTools = "UNITY_MCP_TOOLS";
         public const string EnvStartServer = "UNITY_MCP_START_SERVER";
         public const string EnvTransport = "UNITY_MCP_TRANSPORT";
-        public const string EnvCloudUrl = "UNITY_MCP_CLOUD_URL";
-        public const string EnvConnectionMode = "UNITY_MCP_CONNECTION_MODE";
 
         // Short flag aliases recognised by the in-plugin command-line parser.
         // The CLI tool already translates these to the equivalent env vars before
@@ -54,11 +52,9 @@ namespace Feeder.MCP.Runtime.Utils
         public const string FieldKeepConnected = nameof(UnityMcpPlugin.UnityConnectionConfig.KeepConnected);
         public const string FieldAuthOption = nameof(UnityMcpPlugin.UnityConnectionConfig.AuthOption);
         public const string FieldLocalToken = nameof(UnityMcpPlugin.UnityConnectionConfig.LocalToken);
-        public const string FieldCloudToken = nameof(UnityMcpPlugin.UnityConnectionConfig.CloudToken);
         public const string FieldTools = nameof(UnityMcpPlugin.UnityConnectionConfig.EnabledToolsOverride);
         public const string FieldStartServer = nameof(UnityMcpPlugin.UnityConnectionConfig.KeepServerRunning);
         public const string FieldTransport = nameof(UnityMcpPlugin.UnityConnectionConfig.TransportMethod);
-        public const string FieldConnectionMode = nameof(UnityMcpPlugin.UnityConnectionConfig.ConnectionMode);
 
         /// <summary>
         /// Captures, per overridden field, the disk-baseline value (what was read from JSON)
@@ -151,41 +147,23 @@ namespace Feeder.MCP.Runtime.Utils
 
             string Sanitize(string raw) => raw.Trim().Trim('"');
 
-            // UNITY_MCP_HOST is the legacy alias for UNITY_MCP_CLOUD_URL.
-            string? sanitizedHost = null;
-            var rawHost = Resolve(EnvCloudUrl, FlagUrl) ?? Resolve(EnvHost, flagAlias: null);
+            var rawHost = Resolve(EnvHost, FlagUrl);
             if (rawHost != null)
             {
                 var host = Sanitize(rawHost).TrimEnd('/');
                 if (host.Length > 0)
                 {
-                    sanitizedHost = host;
-                    if (!string.Equals(host, config.LocalHost, StringComparison.Ordinal))
+                    if (!IsLoopbackUrl(host))
+                    {
+                        _logger.LogWarning("[MCP] Ignored non-loopback host override: {Value}", host);
+                    }
+                    else if (!string.Equals(host, config.LocalHost, StringComparison.Ordinal))
                     {
                         record.Track(FieldHost, config.LocalHost, host);
                         config.LocalHost = host;
                         _logger.LogInformation("[MCP] Override: {Key}={Value}", FieldHost, host);
                     }
                 }
-            }
-
-            // Loopback URLs without an explicit mode infer Custom (worktree / local-dev).
-            // Remote URLs without an explicit mode leave the disk-baseline ConnectionMode untouched.
-            var rawMode = Resolve(EnvConnectionMode, flagAlias: null);
-            ConnectionMode? targetMode = null;
-            if (rawMode != null && Enum.TryParse<ConnectionMode>(Sanitize(rawMode), ignoreCase: true, out var explicitMode))
-            {
-                targetMode = explicitMode;
-            }
-            else if (sanitizedHost != null && IsLoopbackUrl(sanitizedHost))
-            {
-                targetMode = ConnectionMode.Custom;
-            }
-            if (targetMode.HasValue && targetMode.Value != config.ConnectionMode)
-            {
-                record.Track(FieldConnectionMode, config.ConnectionMode, targetMode.Value);
-                config.ConnectionMode = targetMode.Value;
-                _logger.LogInformation("[MCP] Override: {Key}={Value}", FieldConnectionMode, targetMode.Value);
             }
 
             var rawKeep = Resolve(EnvKeepConnected, flagAlias: null);
@@ -206,32 +184,15 @@ namespace Feeder.MCP.Runtime.Utils
                 _logger.LogInformation("[MCP] Override: {Key}={Value}", EnvAuthOption, ao);
             }
 
-            // Resolved AFTER ConnectionMode so we route to the correct underlying field
-            // (LocalToken in Custom mode, CloudToken in Cloud mode). We track the specific
-            // backing field rather than the abstract Token property because only the backing
-            // fields are serialised — restoring the baseline must target the same field that
-            // was clobbered.
             var rawToken = Resolve(EnvToken, FlagToken);
             if (rawToken != null)
             {
                 var token = Sanitize(rawToken);
-                if (config.ConnectionMode == ConnectionMode.Cloud)
+                if (!string.Equals(token, config.LocalToken, StringComparison.Ordinal))
                 {
-                    if (!string.Equals(token, config.CloudToken, StringComparison.Ordinal))
-                    {
-                        record.Track(FieldCloudToken, config.CloudToken, token);
-                        config.CloudToken = token;
-                        _logger.LogInformation("[MCP] Override: {Key}=*** (CloudToken)", EnvToken);
-                    }
-                }
-                else
-                {
-                    if (!string.Equals(token, config.LocalToken, StringComparison.Ordinal))
-                    {
-                        record.Track(FieldLocalToken, config.LocalToken, token);
-                        config.LocalToken = token;
-                        _logger.LogInformation("[MCP] Override: {Key}=*** (LocalToken)", EnvToken);
-                    }
+                    record.Track(FieldLocalToken, config.LocalToken, token);
+                    config.LocalToken = token;
+                    _logger.LogInformation("[MCP] Override: {Key}=*** (LocalToken)", EnvToken);
                 }
             }
 
@@ -316,9 +277,6 @@ namespace Feeder.MCP.Runtime.Utils
                     case FieldLocalToken:
                         config.LocalToken = (string?)kvp.Value;
                         break;
-                    case FieldCloudToken:
-                        config.CloudToken = (string?)kvp.Value;
-                        break;
                     case FieldTools:
                         config.EnabledToolsOverride = (List<string>?)kvp.Value;
                         break;
@@ -327,9 +285,6 @@ namespace Feeder.MCP.Runtime.Utils
                         break;
                     case FieldTransport:
                         if (kvp.Value is TransportMethod tm) config.TransportMethod = tm;
-                        break;
-                    case FieldConnectionMode:
-                        if (kvp.Value is ConnectionMode cm) config.ConnectionMode = cm;
                         break;
                     default:
                         // Fail loudly if a new Field* constant is added to Track but forgotten here —
@@ -342,7 +297,7 @@ namespace Feeder.MCP.Runtime.Utils
         /// <summary>
         /// Returns true if the given URL targets a loopback host
         /// (<c>localhost</c>, <c>127.0.0.0/8</c>, or IPv6 <c>::1</c>).
-        /// Used to infer <see cref="ConnectionMode.Custom"/> when a worktree-style local URL is supplied.
+        /// Used to reject host values that do not point at this machine.
         /// </summary>
         public static bool IsLoopbackUrl(string url)
         {

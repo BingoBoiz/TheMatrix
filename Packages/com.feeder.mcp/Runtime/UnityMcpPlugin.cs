@@ -16,7 +16,7 @@ namespace Feeder.MCP
 
     public partial class UnityMcpPlugin : IDisposable
     {
-        public const string Version = "0.84.0";
+        public const string Version = "0.87.0";
 
         private static int _singletonCount = 0;
         public static bool HasAnyInstance => _singletonCount > 0;
@@ -48,8 +48,6 @@ namespace Feeder.MCP
         public ILogger Logger => McpPluginInstance?.Logger ?? _logger;
         public Reflector? Reflector => McpPluginInstance?.McpManager.Reflector;
         public IToolManager? Tools => McpPluginInstance?.McpManager.ToolManager;
-        public IPromptManager? Prompts => McpPluginInstance?.McpManager.PromptManager;
-        public IResourceManager? Resources => McpPluginInstance?.McpManager.ResourceManager;
 
         public UnityLogCollector? LogCollector { get; protected set; } = null;
 

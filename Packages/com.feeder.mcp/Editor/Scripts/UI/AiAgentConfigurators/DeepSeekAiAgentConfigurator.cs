@@ -9,11 +9,11 @@ using TransportMethod = Feeder.McpPlugin.Common.Consts.MCP.Server.TransportMetho
 namespace Feeder.MCP.Editor.UI
 {
     /// <summary>
-    /// DeepSeek AI agent configurator for the Matrix AI Connector.
+    /// DeepSeek AI agent configurator for the Matrix Bridge.
     ///
     /// The shared <see cref="AgentConfig.AiAgentConfiguratorRegistry"/> (compiled into
     /// Feeder.McpPlugin.dll) has no runtime registration API, so DeepSeek is defined here, in
-    /// the package's Editor assembly, and injected into the agent dropdown right after
+    /// the package's Editor assembly, and injected into the agent list right after
     /// Claude Code by <see cref="AiAgentCatalog"/>.
     ///
     /// Configuration surface:
@@ -80,22 +80,6 @@ namespace Feeder.MCP.Editor.UI
         protected override IReadOnlyList<AgentConfig.ConfigurationSection> BuildSections(
             AgentConfig.AgentConfiguratorSettings settings, TransportMethod transport, ILogger logger)
             => DefaultConfigurationSections(settings, transport, logger);
-
-        protected override IReadOnlyList<AgentConfig.ConfigurationSection> BuildTroubleshootingSections(
-            AgentConfig.AgentConfiguratorSettings settings, TransportMethod transport, ILogger logger)
-        {
-            var sections = new List<AgentConfig.ConfigurationSection>(base.BuildTroubleshootingSections(settings, transport, logger));
-            sections.AddRange(AgentConfig.AiAgentConfigurator.TroubleshootingSection(new[]
-            {
-                "In Unity, open Tools > Feeder > Matrix AI Connector and select DeepSeek.",
-                "Enable Auto-generate Skills — skills are written to the project's .agents/skills folder, which DeepSeek Harness (DSH) reads automatically.",
-                "Connect DeepSeek Harness to Unity: in DSH, configure the mcp-client plugin with " +
-                    $"transport \"streamable-http\", url \"{settings.Host}\" and headers {{\"Authorization\": \"Bearer <token>\"}} " +
-                    "(the token is shown in the MCP configuration section). DSH does not read .mcp.json.",
-                "The Configure button writes the project-root .mcp.json entry (server name Feeder-MCP) for MCP-native clients such as Claude Code.",
-            }));
-            return sections;
-        }
 
         /// <summary>
         /// Builds the stdio launch arguments exactly like the shared library does for Claude Code

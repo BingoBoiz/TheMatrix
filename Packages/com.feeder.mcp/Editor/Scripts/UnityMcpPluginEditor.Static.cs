@@ -165,25 +165,6 @@ namespace Feeder.MCP
                 NotifyChanged(Instance.unityConnectionConfig);
             }
         }
-        public static ConnectionMode ConnectionMode
-        {
-            get => Instance.unityConnectionConfig.ConnectionMode;
-            set
-            {
-                Instance.unityConnectionConfig.ConnectionMode = value;
-                NotifyChanged(Instance.unityConnectionConfig);
-            }
-        }
-        public static string CloudServerUrl => UnityMcpPlugin.UnityConnectionConfig.CloudServerUrl;
-        public static string? CloudToken
-        {
-            get => Instance.unityConnectionConfig.CloudToken;
-            set
-            {
-                Instance.unityConnectionConfig.CloudToken = value;
-                NotifyChanged(Instance.unityConnectionConfig);
-            }
-        }
 
         public static bool IsAutoGenerateSkills(string agentId)
         {

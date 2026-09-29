@@ -3,8 +3,8 @@ using UnityEngine;
 namespace Feeder.MCP.Editor.Persistence
 {
     /// <summary>
-    /// Small typed wrappers used by the connector's editor UI. Keys intentionally match the
-    /// former PlayerPrefsEx format so upgrading from an embedded FeederBase copy keeps settings.
+    /// Small typed wrappers used by the package's editor UI. Keys intentionally match the
+    /// former preferences-package format so upgrading from an embedded FeederBase copy keeps settings.
     /// </summary>
     public struct PlayerPrefsBool
     {

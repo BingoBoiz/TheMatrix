@@ -47,7 +47,7 @@ public class HubConnectionProvider : IHubConnectionProvider
 			}), (Action<ILoggingBuilder>)delegate(ILoggingBuilder logging)
 			{
 				logging.ClearProviders();
-				logging.AddProvider(new ForwardLoggerProvider(_logger, "To stop seeing the error, please <b>Stop</b> the connection to MCP server in <b>AI Game Developer</b> window."));
+				logging.AddProvider(new ForwardLoggerProvider(_logger, "To stop seeing the error, please <b>Stop</b> the connection to MCP server in the <b>Matrix Bridge</b> window."));
 				logging.SetMinimumLevel(LogLevel.Trace);
 			}).Build());
 		}

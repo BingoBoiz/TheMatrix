@@ -47,7 +47,7 @@ namespace Feeder.MCP.Editor.Utils
         /// <inheritdoc/>
         protected override void BuildToolCommand(StringBuilder sb, IRunTool tool, string host, string inputExample)
         {
-            sb.AppendLine("Call this tool through the MCP client connected to the local Matrix AI Connector server.");
+            sb.AppendLine("Call this tool through the MCP client connected to the local Matrix Bridge server.");
             sb.AppendLine();
             sb.AppendLine("Example input:");
             sb.AppendLine("```json");

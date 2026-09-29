@@ -12,10 +12,10 @@ namespace Feeder.MCP.Editor.UI
     /// The shared registry (compiled into Feeder.McpPlugin.dll) is a static, closed list with no
     /// registration API, so agents that are not part of the shared library — currently
     /// <see cref="DeepSeekAiAgentConfigurator"/> — are injected by this assembly. DeepSeek is
-    /// inserted immediately after Claude Code in the dropdown order.
+    /// inserted immediately after Claude Code in the list order.
     ///
-    /// All connector UI and startup paths that need the agent list go through this catalog so the
-    /// injected agents behave identically to the shared ones (dropdown, MCP auto-configure,
+    /// All window and startup paths that need the agent list go through this catalog so the
+    /// injected agents behave identically to the shared ones (chips, MCP auto-configure,
     /// skills auto-generation).
     /// </summary>
     public static class AiAgentCatalog

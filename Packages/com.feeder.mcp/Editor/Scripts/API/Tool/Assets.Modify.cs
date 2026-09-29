@@ -110,7 +110,7 @@ namespace Feeder.MCP.Editor.API
                 if (hasContent)
                 {
                     // Fixing instanceID - inject expected instance ID into the valueJsonElement.
-                    // Written as a JSON string of decimal digits to match the #759 EntityId
+                    // Written as a JSON string of decimal digits to match the EntityId
                     // wire contract (see EntityIdConverter top-of-file). Calling the ulong
                     // overload here would throw because TryGetUInt64 throws InvalidOperationException
                     // on a String-valued JsonElement (the value left there by the serializer).

@@ -13,8 +13,6 @@ public sealed class VisualStudioCodeCopilotConfigurator : AiAgentConfigurator
 
 	public override string DownloadUrl => "https://code.visualstudio.com/download";
 
-	public override string TutorialUrl => "https://www.youtube.com/watch?v=ZhP7Ju91mOE";
-
 	public override string? SkillsPath => ".claude/skills";
 
 	public override string? IconName => "vs-code-64.png";

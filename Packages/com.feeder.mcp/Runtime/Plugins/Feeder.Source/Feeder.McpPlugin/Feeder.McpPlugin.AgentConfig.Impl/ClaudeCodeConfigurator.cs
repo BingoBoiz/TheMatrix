@@ -14,8 +14,6 @@ public sealed class ClaudeCodeConfigurator : AiAgentConfigurator
 
 	public override string DownloadUrl => "https://docs.anthropic.com/en/docs/claude-code/overview";
 
-	public override string TutorialUrl => "https://youtu.be/Sknh2p12W8c";
-
 	public override string? SkillsPath => ".claude/skills";
 
 	public override string? IconName => "claude-64.png";

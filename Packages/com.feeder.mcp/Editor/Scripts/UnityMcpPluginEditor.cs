@@ -5,7 +5,7 @@ namespace Feeder.MCP
 {
     /// <summary>
     /// Editor-only singleton that owns the persistent MCP connection used
-    /// by Unity Editor tooling (Matrix AI Connector window, configurators, etc.).
+    /// by Unity Editor tooling (Matrix Bridge window, configurators, etc.).
     /// Lives in the Editor assembly — not accessible from Runtime code.
     /// </summary>
     public partial class UnityMcpPluginEditor : UnityMcpPlugin

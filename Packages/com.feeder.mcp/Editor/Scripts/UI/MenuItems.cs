@@ -11,8 +11,8 @@ namespace Feeder.MCP.Editor.UI
 {
     public static class MenuItems
     {
-        [MenuItem("Tools/Feeder/Matrix AI Connector", priority = -18)]
-        public static void ShowWindow() => MainWindowEditor.ShowWindow();
+        [MenuItem("Tools/Feeder/Matrix Bridge", priority = -18)]
+        public static void ShowWindow() => MatrixBridgeWindow.ShowWindow();
 
         [MenuItem("Tools/Feeder/Matrix Space", priority = -17)]
         public static void ShowMatrixSpace() => MatrixSpaceWindow.ShowWindow();
@@ -52,10 +52,17 @@ namespace Feeder.MCP.Editor.UI
         }
 
         [MenuItem("Tools/Feeder/MCP/Server/Open Logs", priority = 1002)]
-        public static void OpenServerLogs() => OpenFile(McpServerManager.ExecutableFolderPath + "/logs/server-log.txt");
-
-        [MenuItem("Tools/Feeder/MCP/Server/Open Log Errors", priority = 1003)]
-        public static void OpenServerLogErrors() => OpenFile(McpServerManager.ExecutableFolderPath + "/logs/server-log-error.txt");
+        public static void OpenServerLogs()
+        {
+            var folder = Path.Combine(
+                System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "FeederMatrix", "logs");
+            if (!Directory.Exists(folder))
+            {
+                Debug.LogWarning($"Folder not found: {folder}");
+                return;
+            }
+            EditorUtility.RevealInFinder(folder);
+        }
 
         [MenuItem("Tools/Feeder/MCP/Server/Launch MCP Inspector", priority = 1004)]
         public static void LaunchMcpInspector()
@@ -129,25 +136,12 @@ namespace Feeder.MCP.Editor.UI
             }
         }
 
-        [MenuItem("Tools/Feeder/MCP/Debug/Serialization Check", priority = 2002)]
-        public static void ShowSerializationCheck() => SerializationCheckWindow.ShowWindow();
-
         [MenuItem("Tools/Feeder/MCP/Reset Config", priority = 2020)]
         public static void ResetConfig()
         {
             UnityMcpPluginEditor.ResetConfig();
             // Reload Domain to ensure all changes are picked up.
             EditorUtility.RequestScriptReload();
-        }
-
-        static void OpenFile(string path)
-        {
-            if (!File.Exists(path))
-            {
-                Debug.LogWarning($"File not found: {path}");
-                return;
-            }
-            Application.OpenURL(path);
         }
     }
 }

@@ -102,6 +102,13 @@ namespace Feeder.MCP
                     config.LocalToken = GenerateToken();
                     wasCreated = true;
                 }
+                if (!EnvironmentUtils.IsLoopbackUrl(config.LocalHost))
+                {
+                    _logger.LogWarning("{method}: <color=orange>host <i>{host}</i> is not a loopback address; using the local default</color>",
+                        nameof(GetOrCreateConfig), config.LocalHost);
+                    config.LocalHost = UnityConnectionConfig.DefaultHost;
+                    wasCreated = true;
+                }
 
                 // Auto-heal a legacy absolute `SkillsPath` that points inside the project root.
                 // Committing `UserSettings/Feeder-MCP-Config.json` is supposed to be portable
@@ -151,25 +158,8 @@ namespace Feeder.MCP
                         ?.Select(t => new UnityConnectionConfig.McpFeature(t.Name, Tools.IsToolEnabled(t.Name)))
                         ?.ToList();
 
-                    var enabledPromptNames = Prompts?.GetAllPrompts()
-                        ?.Select(p => new UnityConnectionConfig.McpFeature(p.Name, Prompts.IsPromptEnabled(p.Name)))
-                        ?.ToList();
-
-                    var enabledResourceNames = Resources?.GetAllResources()
-                        ?.Select(r => new UnityConnectionConfig.McpFeature(r.Name, Resources.IsResourceEnabled(r.Name)))
-                        ?.ToList();
-
-                    unityConnectionConfig.Tools = enabledToolNames != null && enabledToolNames.Count > 0
-                        ? enabledToolNames
-                        : UnityConnectionConfig.DefaultTools;
-
-                    unityConnectionConfig.Prompts = enabledPromptNames != null && enabledPromptNames.Count > 0
-                        ? enabledPromptNames
-                        : UnityConnectionConfig.DefaultPrompts;
-
-                    unityConnectionConfig.Resources = enabledResourceNames != null && enabledResourceNames.Count > 0
-                        ? enabledResourceNames
-                        : UnityConnectionConfig.DefaultResources;
+                    if (enabledToolNames != null && enabledToolNames.Count > 0)
+                        unityConnectionConfig.Tools = enabledToolNames;
                 }
 
                 // Runtime-only overrides (env vars / CLI flags) MUST NOT be persisted to disk.

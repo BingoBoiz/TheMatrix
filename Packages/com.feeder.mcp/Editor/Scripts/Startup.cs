@@ -13,13 +13,25 @@ namespace Feeder.MCP.Editor
     {
         static readonly ILogger _logger = UnityLoggerFactory.LoggerFactory.CreateLogger(nameof(Startup));
 
+        static bool _activated;
+
         static Startup()
+        {
+            if (MatrixActivation.IsEnabled)
+                Activate();
+        }
+
+        internal static void Activate()
         {
             UnityMcpPluginEditor.Instance.BuildMcpPluginIfNeeded();
             UnityMcpPluginEditor.Instance.AddUnityLogCollectorIfNeeded(() => new BufferedFileLogStorage());
 
+            if (_activated)
+                return;
+            _activated = true;
+
             if (Application.dataPath.Contains(" "))
-                Debug.LogError("The project path contains spaces, which may cause issues during usage of Matrix AI Connector. Please consider the move the project to a folder without spaces.");
+                Debug.LogError("The project path contains spaces, which may cause issues during usage of Matrix Bridge. Please consider the move the project to a folder without spaces.");
 
             SubscribeOnEditorEvents();
 
@@ -27,17 +39,11 @@ namespace Feeder.MCP.Editor
             API.Tool_Tests.Init();
             PackageUtils.Init();
 
-            // Auto-generate skill files for the selected agent if enabled. selectedAiAgentId is
-            // PlayerPrefs-backed and empty until the connector window is opened, so fall back to
-            // Claude Code (same default the window uses) for the zero-setup install path.
-            var savedAgentId = MainWindowEditor.selectedAiAgentId.Value;
-            if (string.IsNullOrEmpty(savedAgentId))
-                savedAgentId = "claude-code";
-            var agent = AiAgentCatalog.GetByAgentId(savedAgentId);
-            if (agent?.SupportsSkills == true && UnityMcpPluginEditor.IsAutoGenerateSkills(agent.AgentId))
+            foreach (var agentId in UnityMcpPluginEditor.AutoConfigureAgentIds)
             {
-                UnityMcpPluginEditor.SkillsPath = agent.SkillsPath!;
-                UnityMcpPluginEditor.Instance.McpPluginInstance!.GenerateSkillFiles(UnityMcpPluginEditor.ProjectRootPath);
+                var agent = AiAgentCatalog.GetByAgentId(agentId);
+                if (agent?.SupportsSkills == true && UnityMcpPluginEditor.IsAutoGenerateSkills(agent.AgentId))
+                    BridgeAgents.GenerateSkills(agent);
             }
 
             // Write MCP config files for auto-configure-enabled agents (once per session).

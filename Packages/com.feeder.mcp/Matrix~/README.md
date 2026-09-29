@@ -1,6 +1,6 @@
 # Feeder Local Matrix
 
-Feeder-owned persistent MCP server for Matrix AI Connector: MCP (Streamable HTTP or unified stdio
+Feeder-owned persistent MCP server for Matrix Bridge: MCP (Streamable HTTP or unified stdio
 mode) on the AI side and SignalR/JSON (FMP/1) on the Unity side. Runs entirely on loopback. The
 distributed file keeps the historical `gamedev-mcp-server.exe` filename only for client-config
 compatibility; its implementation and metadata are Feeder MCP Server.
@@ -45,7 +45,7 @@ feeder-matrix-bench baseline --url http://127.0.0.1:20270/mcp --label X --out ou
 
 Measured 2026-07-10 (same machine, 0 errors on every case):
 
-| Case (p50/p95 ms) | Legacy upstream local 8.0.1 | Feeder matrix (mock) |
+| Case (p50/p95 ms) | Previous server local 8.0.1 | Feeder matrix (mock) |
 |---|---|---|
 | ping warm ×10k | 1.84 / 3.47 | **0.27 / 0.44** |
 | tools/list ×1k | 117.7 / 172.9 (145 KB) | 0.27 / 0.44 (mock; parity target ≤10 ms cached) |

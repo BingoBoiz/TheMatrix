@@ -22,9 +22,7 @@ namespace Feeder.MCP
             // Feed the host project root into the connection config BEFORE the plugin is built.
             // McpPlugin's ctor calls GenerateSkillFilesIfNeeded() internally; it needs an anchor
             // for the relative SkillsPath. Without this, the McpPlugin ctor logs an
-            // InvalidOperationException every Editor open / domain reload — see
-            // internal compatibility note (host-side cascade of upstream
-            // shared MCP runtime compatibility).
+            // InvalidOperationException every Editor open / domain reload.
             unityConnectionConfig.ProjectRootPath = ProjectRootPath;
             _logger.LogTrace("Seeded ConnectionConfig.ProjectRootPath={path}", ProjectRootPath);
 

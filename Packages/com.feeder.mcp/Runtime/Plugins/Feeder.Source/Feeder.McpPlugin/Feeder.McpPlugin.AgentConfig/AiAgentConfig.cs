@@ -5,7 +5,7 @@ namespace Feeder.McpPlugin.AgentConfig
 {
 public abstract class AiAgentConfig
 {
-	public static readonly string[] DeprecatedMcpServerNames = new string[2] { "Unity-MCP", "ai-game-developer" };
+	public static readonly string[] DeprecatedMcpServerNames = new string[0];
 
 	public const string DefaultMcpServerName = "Feeder-MCP";
 

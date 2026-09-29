@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Feeder.Matrix.Benchmarks;
 
-// feeder-matrix-bench baseline --url http://127.0.0.1:20261/mcp --label legacy-upstream-local --out baseline.json
+// feeder-matrix-bench baseline --url http://127.0.0.1:20261/mcp --label previous-local --out baseline.json
 //   [--pings 10000] [--tools-list 1000] [--tool-pings 500] [--session-inits 50] [--pid <serverPid>] [--export <dir>]
 var options = ParseArgs(args);
 if (options is null)
