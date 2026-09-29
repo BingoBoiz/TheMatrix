@@ -37,8 +37,20 @@ For other AI clients, or to opt out, open **Tools > Feeder > Matrix AI Connector
 client, and use the **Configure** button or the **Auto-configure on Unity load** toggle.
 
 Note: the server port is derived from the project's directory path, so `.mcp.json` differs
-between machines that clone the project to different paths. This is expected — the file is
-rewritten with the correct port on editor load, so it is safe to commit or gitignore it.
+between machines that clone the project to different paths. The file is rewritten with the local
+port on editor load. Do not commit it: run **Tools > Feeder > Matrix Setup** once per machine to
+gitignore it.
+
+## Matrix Setup
+
+Run **Tools > Feeder > Matrix Setup** once on each machine. It:
+
+- adds `.mcp.json` to the project's `.gitignore`; if the file is already committed, it prints
+  `git rm --cached .mcp.json` for you to run;
+- keeps only the core MCP tools enabled and disables the rest, to cut the tokens sent with every
+  request; a client enables more on demand with `tool-set-enabled-state`;
+- writes the Claude Code MCP config, then installs or verifies the Claude Code CLI (Node.js is
+  installed with winget if missing).
 
 ## Platform support
 

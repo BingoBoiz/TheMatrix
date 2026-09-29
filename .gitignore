@@ -83,3 +83,6 @@ crashlytics-build.properties
 .cursor
 .vscode
 .vsconfig
+
+# Matrix MCP: per-machine files (the port derives from the project path)
+/.mcp.json

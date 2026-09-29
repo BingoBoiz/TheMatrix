@@ -2,6 +2,13 @@
 
 All notable changes to this package are documented here.
 
+## [0.86.0] - 2026-09-29
+
+- Added **Tools > Feeder > Matrix Setup**, a per-machine setup: it adds `.mcp.json` to the project's
+  `.gitignore`, keeps only the core MCP tools enabled to cut the tokens sent with each request, and
+  writes the Claude Code MCP config and installs or verifies the Claude Code CLI.
+- Documented that `.mcp.json` holds a machine-specific port and should be gitignored, not committed.
+
 ## [0.85.0] - 2026-07-17
 
 - Added zero-setup auto-configure: on editor load the package writes the MCP config file for
