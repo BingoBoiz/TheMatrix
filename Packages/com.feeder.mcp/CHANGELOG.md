@@ -2,6 +2,16 @@
 
 All notable changes to this package are documented here.
 
+## [0.87.1] - 2026-09-30
+
+### Fixed
+
+- Matrix Bridge and Matrix Space keep their font and rain after you press Play or open another scene.
+- Matrix Bridge no longer floods the console with `MissingReferenceException`, and on Unity 6 its dock
+  area switches tabs instead of throwing `InvalidOperationException`.
+- An editor that already hit these errors recovers on the next script reload, with no restart.
+- The Matrix rain no longer leaks a font and a material on every script reload.
+
 ## [0.87.0] - 2026-09-29
 
 ### Added

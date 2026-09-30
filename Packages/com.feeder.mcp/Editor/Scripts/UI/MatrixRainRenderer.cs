@@ -168,8 +168,19 @@ namespace Feeder.MCP.Editor.UI
                 font.GetCharacterInfo(Glyphs[i], out glyphInfo[i], atlasSize, FontStyle.Normal);
 
             // The atlas texture object can be replaced on rebuild; never cache it independently.
-            if (font.material != null)
-                material.mainTexture = font.material.mainTexture;
+            var fontMaterial = font.material;
+            if (fontMaterial != null)
+            {
+                var atlas = fontMaterial.mainTexture;
+                if (ownsFont)
+                {
+                    // play mode destroys the font's material and atlas unless they carry the same flags as the font
+                    fontMaterial.hideFlags = HideFlags.HideAndDontSave;
+                    if (atlas != null)
+                        atlas.hideFlags = HideFlags.HideAndDontSave;
+                }
+                material.mainTexture = atlas;
+            }
 
             glyphCacheDirty = false;
         }

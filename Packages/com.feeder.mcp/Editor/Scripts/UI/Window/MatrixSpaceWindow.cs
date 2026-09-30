@@ -90,6 +90,8 @@ namespace Feeder.MCP.Editor.UI
             MatrixSpaceReloadCoordinator.StateChanged -= OnReloadStateChanged;
             CaptureAllSessions();
             MatrixSpaceSessionStore.instance.PersistNow();
+            _matrixRain?.Dispose();
+            _matrixRain = null;
         }
 
         public override void CreateGUI()
@@ -803,12 +805,6 @@ namespace Feeder.MCP.Editor.UI
             foreach (var session in _sessions.Values)
                 session.Dispose();
             _sessions.Clear();
-
-            if (_matrixRain != null)
-            {
-                _matrixRain.Dispose();
-                _matrixRain = null;
-            }
         }
     }
 }

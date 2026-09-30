@@ -12,7 +12,6 @@ using Microsoft.Extensions.Logging;
 using R3;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.TextCore.Text;
 using UnityEngine.UIElements;
 using AgentConfig = Feeder.McpPlugin.AgentConfig;
 using LogLevel = Feeder.MCP.Runtime.Utils.LogLevel;
@@ -28,8 +27,6 @@ namespace Feeder.MCP.Editor.UI
         {
             "mb-state--offline", "mb-state--linking", "mb-state--online", "mb-state--fault",
         };
-        private static readonly string[] _monoFamilies = { "Consolas", "Cascadia Mono", "Menlo", "DejaVu Sans Mono", "Courier New" };
-        private static FontAsset? _monoAsset;
         private static readonly LogLevel[] _menuLogLevels =
         {
             LogLevel.Trace, LogLevel.Debug, LogLevel.Info, LogLevel.Warning, LogLevel.Error,
@@ -41,7 +38,6 @@ namespace Feeder.MCP.Editor.UI
         private const int MinPort = 1024;
         private const int MaxPort = 65535;
         private const int MaxNoteLength = 72;
-        private const string MonoAssetName = "MatrixBridgeMono";
 
         protected override string WindowTitle => "Matrix Bridge";
         protected override string[] WindowUxmlPaths => _windowUxmlPaths;
@@ -113,10 +109,9 @@ namespace Feeder.MCP.Editor.UI
             SetupWindowWithIcon();
         }
 
-        private void OnDisable() => Unbind();
-
-        private void OnDestroy()
+        private void OnDisable()
         {
+            Unbind();
             if (_rain != null)
             {
                 _rain.Dispose();
@@ -173,29 +168,9 @@ namespace Feeder.MCP.Editor.UI
             Refresh();
         }
 
-        private static FontAsset? MonoAsset()
-        {
-            if (_monoAsset != null)
-                return _monoAsset;
-            _monoAsset = Resources.FindObjectsOfTypeAll<FontAsset>().FirstOrDefault(font => font.name == MonoAssetName);
-            if (_monoAsset != null)
-                return _monoAsset;
-            foreach (var family in _monoFamilies)
-            {
-                var asset = FontAsset.CreateFontAsset(family, "Regular");
-                if (asset == null)
-                    continue;
-                asset.name = MonoAssetName;
-                asset.hideFlags = HideFlags.HideAndDontSave;
-                _monoAsset = asset;
-                return asset;
-            }
-            return null;
-        }
-
         private static void ApplyMono(VisualElement root)
         {
-            var asset = MonoAsset();
+            var asset = BridgeFont.Get();
             if (asset == null)
                 return;
             var definition = new StyleFontDefinition(FontDefinition.FromSDFFont(asset));
