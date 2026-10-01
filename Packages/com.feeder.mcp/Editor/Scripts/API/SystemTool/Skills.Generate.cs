@@ -19,7 +19,7 @@ namespace Feeder.MCP.Editor.API
             Enabled = false,
             ToolType = McpToolType.System
         )]
-        [AiSkillDescription("Regenerate every `SKILL.md` from the project's currently-registered MCP tools into " +
+        [AiSkillDescription("Regenerate every `SKILL.md` from the project's currently-enabled MCP tools into " +
             "the configured skills folder (or a project-relative override path). " +
             "Writes the YAML `description:` from `[AiSkillDescription]` and the body from `[AiSkillBody]`.")]
         [AiSkillBody("Generate all skills from the existed Tools in the Unity Project.\n\n" +
@@ -29,7 +29,7 @@ namespace Feeder.MCP.Editor.API
             "is used.\n\n" +
             "## Behavior\n\n" +
             "Creates the destination folder if missing, then invokes `McpPluginInstance.GenerateSkillFiles(...)` to " +
-            "emit a `SKILL.md` per registered MCP tool. The plugin's `SkillsPath` is temporarily swapped to the target " +
+            "emit a `SKILL.md` per enabled MCP tool and remove the skill folders of disabled tools. The plugin's `SkillsPath` is temporarily swapped to the target " +
             "folder and restored in `finally` so the on-disk configuration is unchanged after the call returns.")]
         [Description("Generate all skills from the existed Tools in the Unity Project.")]
         public void GenerateAll

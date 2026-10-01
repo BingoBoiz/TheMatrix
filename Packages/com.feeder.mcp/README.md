@@ -29,8 +29,8 @@ Installing the package changes nothing on a machine: no window opens, no server 
 is written until the person using the project turns Matrix on. Teammates who do not use MCP are
 never affected, even when the project is shared through version control.
 
-To turn it on, run **Tools > Feeder > Matrix Setup** once (see [Matrix Setup](#matrix-setup)), or
-open **Tools > Feeder > Matrix Bridge** and click the large state word. The choice is stored per
+To turn it on, run **Tools > Feeder > Setup...** once (see [Matrix Setup](#matrix-setup)). Until
+then the other items of the **Tools > Feeder** menu are greyed out. The choice is stored per
 machine and per project folder, outside the project, so it is never committed. A saved window
 layout that includes Matrix windows or the Scene view toolbar (for example one checked in with the
 project) does not open them for someone who has not turned Matrix on.
@@ -42,18 +42,19 @@ Once Matrix is on, the package does this each time the editor loads:
    the next session in that folder).
 3. Generates skill files into `.claude/skills`.
 
-For other AI clients, open **Tools > Feeder > Matrix Bridge** and click the client name at the
+For other AI clients, open **Tools > Feeder > Bridge** and click the client name at the
 bottom of the window to wire or unwire it. To turn Matrix off again, click the state word while it
-reads ONLINE: the server stops, and nothing starts, opens or is written on the next load.
+reads ONLINE: the server stops, the other **Tools > Feeder** items grey out again, and nothing
+starts, opens or is written on the next load.
 
 Note: the server port is derived from the project's directory path, so `.mcp.json` differs
 between machines that clone the project to different paths. The file is rewritten with the local
-port on editor load. Do not commit it: run **Tools > Feeder > Matrix Setup** once per machine to
+port on editor load. Do not commit it: run **Tools > Feeder > Setup...** once per machine to
 gitignore it.
 
 ## Matrix Bridge window
 
-Open **Tools > Feeder > Matrix Bridge**. Every connection is local: the bridge listens on loopback
+Open **Tools > Feeder > Bridge**. Every connection is local: the bridge listens on loopback
 only.
 
 - Click the large state word to link or unlink (OFFLINE, LINKING, ONLINE).
@@ -61,18 +62,32 @@ only.
   wired; an amber dot means the configuration is outdated and a click rewrites it. The `+N` entry
   lists more clients.
 - The `...` menu copies the endpoint, changes the port while offline, sets the logging level,
-  turns the rain background on or off (the same setting as in Matrix Space, for machines where it
-  lags), opens the logs and the config file, and reinstalls the server.
+  opens the Skills window, turns the rain background on or off (the same setting as in Matrix
+  Space, for machines where it lags), opens the logs and the config file, and reinstalls the server.
+- The window's tab icon dims while the editor is not linked.
+
+## Skills window
+
+Open **Tools > Feeder > Skills**. It lists every MCP tool with its own switch.
+
+- Pick a group on the left or type in the search box; the All, On and Off buttons filter by state.
+- Each row shows what the tool does, the tokens it adds to every request while it is on, and a
+  `writes` or `destructive` tag when it changes the project. When a tool works with another one that
+  is off, the row says so; click the name to switch it on too.
+- The bar at the bottom adds up the tokens of everything that is on. **Core only** returns to the
+  default set. **Enable all** asks first, because it costs about 50k tokens per request.
+- A change rewrites the skill files after a second. Reconnect the AI client so it lists the new set.
 
 ## Matrix Setup
 
-Run **Tools > Feeder > Matrix Setup** once on each machine. It:
+Run **Tools > Feeder > Setup...** once on each machine. It:
 
 - turns Matrix on for the project on this machine: it starts the local server and links the editor;
 - adds `.mcp.json` to the project's `.gitignore`; if the file is already committed, it prints
   `git rm --cached .mcp.json` for you to run;
 - keeps only the core MCP tools enabled and disables the rest, to cut the tokens sent with every
-  request; a client enables more on demand with `tool-set-enabled-state`;
+  request; switch more on in **Tools > Feeder > Skills**, or a client enables them on demand with
+  `tool-set-enabled-state`;
 - writes the Claude Code MCP config, then installs or verifies the Claude Code CLI (Node.js is
   installed with winget if missing).
 

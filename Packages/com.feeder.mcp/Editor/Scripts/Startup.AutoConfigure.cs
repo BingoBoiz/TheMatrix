@@ -50,7 +50,7 @@ namespace Feeder.MCP.Editor
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "MCP agent auto-configure failed; editor load is unaffected. Wire the agent manually in Tools/Feeder/Matrix Bridge.");
+                _logger.LogError(e, "MCP agent auto-configure failed; editor load is unaffected. Wire the agent manually in Tools/Feeder/Bridge.");
             }
         }
     }

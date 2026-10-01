@@ -17,7 +17,7 @@ This project has the standalone `com.feeder.mcp` package installed. The package 
 
 ## Open The Bridge
 
-1. Open `Tools/Feeder/Matrix Bridge`.
+1. Open `Tools/Feeder/Bridge`.
 2. Click the large state word until it reads ONLINE. It cycles OFFLINE, LINKING, ONLINE; clicking it again unlinks.
 3. The address under the state word is the local endpoint. Every connection stays on this machine (loopback only).
 
@@ -29,7 +29,7 @@ This project has the standalone `com.feeder.mcp` package installed. The package 
 
 ## Generate Skills
 
-Wiring a client that supports skills also generates its skill files, and they are refreshed on every editor load. Run `unity-skill-generate` to refresh them after changing which tools are enabled.
+Wiring a client that supports skills also generates its skill files, and they are refreshed on every editor load. Skills are written only for enabled tools, so a tool that is off has no skill. Turn a tool on with `tool-set-enabled-state` (list them with `unity-tool-list`), then run `unity-skill-generate` to refresh the skill files.
 
 ## Troubleshooting
 

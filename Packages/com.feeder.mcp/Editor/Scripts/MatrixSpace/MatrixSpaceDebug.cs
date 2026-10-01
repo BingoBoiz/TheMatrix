@@ -12,7 +12,11 @@ namespace Feeder.MCP.Editor.MatrixSpace
     {
         private static AgentSession? _pingSession;
 
-        [MenuItem("Tools/Feeder/MCP/Debug/MatrixSpace CLI Ping", priority = 2003)]
+        [MenuItem("Tools/Feeder/Server/Debug/MatrixSpace CLI Ping", true)]
+        [MenuItem("Tools/Feeder/Server/Debug/MatrixSpace CLI Ping (dispose)", true)]
+        private static bool IsSetUp() => MatrixActivation.IsEnabled;
+
+        [MenuItem("Tools/Feeder/Server/Debug/MatrixSpace CLI Ping", priority = 2003)]
         public static void CliPing()
         {
             var version = ClaudeCliLocator.ProbeVersion();
@@ -39,7 +43,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
             session.Send("Reply with a single short sentence confirming the link is operational. Do not use any tools.");
         }
 
-        [MenuItem("Tools/Feeder/MCP/Debug/MatrixSpace CLI Ping (dispose)", priority = 2004)]
+        [MenuItem("Tools/Feeder/Server/Debug/MatrixSpace CLI Ping (dispose)", priority = 2004)]
         public static void CliPingDispose()
         {
             _pingSession?.Dispose();

@@ -16,7 +16,7 @@ Retrieves Unity Editor logs. Useful for debugging and monitoring Unity Editor ac
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json

@@ -1,6 +1,6 @@
 ---
 name: unity-tool-list
-description: List all Feeder MCP tools registered in the connected Unity Editor instance. Optional regex filter matches against tool name, description, and argument names/descriptions. Use the `includeDescription` / `includeInputs` toggles to control the response size.
+description: List all Feeder MCP tools registered in the connected Unity Editor instance, including disabled ones (see `enabled`); only a core set is on by default, so use this to find a tool, then enable it with tool-set-enabled-state. Optional regex filter matches against tool name, description, and argument names/descriptions. Use the `includeDescription` / `includeInputs` toggles to control the response size.
 ---
 
 # Tool / List
@@ -19,7 +19,7 @@ Iterates `UnityMcpPluginEditor.Instance.Tools.GetAllTools()`, evaluates the filt
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json
@@ -95,6 +95,10 @@ Read the /feeder-mcp-initial-setup skill for local connection setup.
           "type": "string",
           "description": "Tool name."
         },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the tool is enabled. A disabled tool is registered but cannot be called until tool-set-enabled-state turns it on."
+        },
         "description": {
           "type": "string",
           "description": "Tool description."
@@ -104,6 +108,9 @@ Read the /feeder-mcp-initial-setup skill for local connection setup.
           "description": "Tool input arguments."
         }
       },
+      "required": [
+        "enabled"
+      ],
       "description": "MCP tool information."
     },
     "AIGD.ToolInputData-1": {

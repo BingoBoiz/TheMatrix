@@ -39,12 +39,7 @@ namespace Feeder.MCP.Editor
             API.Tool_Tests.Init();
             PackageUtils.Init();
 
-            foreach (var agentId in UnityMcpPluginEditor.AutoConfigureAgentIds)
-            {
-                var agent = AiAgentCatalog.GetByAgentId(agentId);
-                if (agent?.SupportsSkills == true && UnityMcpPluginEditor.IsAutoGenerateSkills(agent.AgentId))
-                    BridgeAgents.GenerateSkills(agent);
-            }
+            BridgeAgents.RegenerateSkills();
 
             // Write MCP config files for auto-configure-enabled agents (once per session).
             EditorApplication.delayCall += AutoConfigureAgents;

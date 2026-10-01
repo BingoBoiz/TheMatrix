@@ -1,6 +1,6 @@
 ---
 name: unity-skill-generate
-description: "Regenerate every `SKILL.md` from the project's currently-registered MCP tools into the configured skills folder (or a project-relative override path). Writes the YAML `description:` from `[AiSkillDescription]` and the body from `[AiSkillBody]`."
+description: "Regenerate every `SKILL.md` from the project's currently-enabled MCP tools into the configured skills folder (or a project-relative override path). Writes the YAML `description:` from `[AiSkillDescription]` and the body from `[AiSkillBody]`."
 ---
 
 # Skill (Tool) / Generate All
@@ -13,11 +13,11 @@ Generate all skills from the existed Tools in the Unity Project.
 
 ## Behavior
 
-Creates the destination folder if missing, then invokes `McpPluginInstance.GenerateSkillFiles(...)` to emit a `SKILL.md` per registered MCP tool. The plugin's `SkillsPath` is temporarily swapped to the target folder and restored in `finally` so the on-disk configuration is unchanged after the call returns.
+Creates the destination folder if missing, then invokes `McpPluginInstance.GenerateSkillFiles(...)` to emit a `SKILL.md` per enabled MCP tool and remove the skill folders of disabled tools. The plugin's `SkillsPath` is temporarily swapped to the target folder and restored in `finally` so the on-disk configuration is unchanged after the call returns.
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json

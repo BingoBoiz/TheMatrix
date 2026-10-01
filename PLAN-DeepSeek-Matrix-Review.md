@@ -1,7 +1,7 @@
-# PLAN — Review tùy chọn DeepSeek trong Matrix AI Connector & Tối ưu Skills cho DeepSeek + Unity
+# PLAN — Review tùy chọn DeepSeek trong Matrix Bridge & Tối ưu Skills cho DeepSeek + Unity
 
 - **Project**: `D:\Unity\TheMatrix`
-- **Package**: `Packages/com.feeder.mcp` — Feeder MCP (Matrix AI Connector), v0.85.0, embedded package
+- **Package**: `Packages/com.feeder.mcp` — Feeder MCP (Matrix Bridge), v0.85.0, embedded package
 - **Trạng thái**: Phase 0 ✅ · Phase 1 ✅ · Phase 2 ✅ (đã verify runtime) · Phase 3 ✅ (8 skill an toàn + 4 skill data-getting when-not) · Phase 4 ✅ (đã regenerate & verify) · Phase 5 ✅ (báo cáo + 2 quyết định sản phẩm đã duyệt & triển khai) · **Đã thực thi step-by-step hoàn tất**
 - **Người duyệt**: The Architect (user)
 
@@ -9,7 +9,7 @@
 
 ## 1. Bối cảnh (Context)
 
-Matrix AI Connector (`com.feeder.mcp`) là package Unity tích hợp sẵn một MCP server cục bộ (Feeder-MCP) để các AI agent điều khiển Unity Editor qua MCP. Package có màn hình cấu hình agent (dropdown) với nhiều agent khác nhau; **tùy chọn "DeepSeek"** là một agent được inject riêng bởi package:
+Matrix Bridge (`com.feeder.mcp`) là package Unity tích hợp sẵn một MCP server cục bộ (Feeder-MCP) để các AI agent điều khiển Unity Editor qua MCP. Package có màn hình cấu hình agent (hàng chip) với nhiều agent khác nhau; **tùy chọn "DeepSeek"** là một agent được inject riêng bởi package:
 
 - `Editor/Scripts/UI/AiAgentConfigurators/DeepSeekAiAgentConfigurator.cs` — định nghĩa agent DeepSeek (Id `deepseek`, skills path `.agents/skills`, viết `.mcp.json` dạng stdio/http).
 - `Editor/Scripts/UI/AiAgentConfigurators/AiAgentCatalog.cs` — chèn DeepSeek ngay sau Claude Code trong dropdown.
@@ -37,7 +37,7 @@ Tổng cộng ~166 file SKILL.md (2 folder), ngoài ra còn skill đặc biệt 
 
 | Hạng mục | Giá trị |
 |---|---|
-| Package | `Packages/com.feeder.mcp`, version `0.85.0`, displayName "Feeder MCP (Matrix AI Connector)" |
+| Package | `Packages/com.feeder.mcp`, version `0.85.0`, displayName "Matrix Bridge" |
 | DeepSeek configurator | `Editor/Scripts/UI/AiAgentConfigurators/DeepSeekAiAgentConfigurator.cs` — `Id="deepseek"`, `AgentName="DeepSeek"`, `SkillsPath=".agents/skills"`, `IconName=""` (không icon), `DownloadUrl=https://www.deepseek.com/`, `TutorialUrl=https://api-docs.deepseek.com/` |
 | Stdio args | `port`, `plugin-timeout`, `client-transport=stdio`, `authorization` — cố tình giống y hệt Claude Code |
 | HTTP config | `type=http`, `url=settings.Host`, auth nếu `IsHttpAuthRequired` |
@@ -86,7 +86,7 @@ Tổng cộng ~166 file SKILL.md (2 folder), ngoài ra còn skill đặc biệt 
 ## 6. Phase 2 — Sửa tùy chọn DeepSeek (nếu findings yêu cầu)
 
 - Sửa `DeepSeekAiAgentConfigurator.cs` / `AiAgentCatalog.cs` / view (label, icon, urls, sections, troubleshooting, args, auth).
-- Verify: mở Unity Editor, kiểm tra dropdown Matrix AI Connector hiển thị DeepSeek, bấm Configure viết `.mcp.json` đúng, Auto-generate skills ghi vào `.agents/skills`.
+- Verify: mở Unity Editor, kiểm tra cửa sổ Matrix Bridge hiển thị chip deepseek, bấm chip viết `.mcp.json` đúng, Auto-generate skills ghi vào `.agents/skills`.
 - Compile sạch (kiểm tra console log / `assets-refresh`).
 
 ## 7. Phase 3 — Nâng cấp nội dung skills ở source C#

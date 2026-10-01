@@ -44,6 +44,7 @@ namespace Feeder.MCP.Editor.UI
         protected override string[] WindowUssPaths => _windowUssPaths;
 
         private readonly CompositeDisposable _subscriptions = new();
+        private readonly CompositeDisposable _titleSubscription = new();
         private IDisposable? _clientsSubscription;
         private readonly List<VisualElement> _chipViews = new();
         private readonly List<string> _clientNames = new();
@@ -69,13 +70,14 @@ namespace Feeder.MCP.Editor.UI
         private int _previewClients;
         private string? _previewFault;
         private bool _dormant;
+        private bool _titleDim;
 
         public static MatrixBridgeWindow ShowWindow()
         {
             MatrixActivation.RequestWindow();
             var isNew = !HasOpenInstances<MatrixBridgeWindow>();
             var window = GetWindow<MatrixBridgeWindow>("Matrix Bridge");
-            window.SetupWindowWithIcon();
+            window.SetupWindowWithIcon(dim: window._titleDim);
             window.minSize = new Vector2(380, 300);
             if (isNew)
                 window.position = new Rect(window.position.x, window.position.y, 460, 340);
@@ -106,11 +108,26 @@ namespace Feeder.MCP.Editor.UI
             _dormant = MatrixActivation.CloseIfDormant(this);
             if (_dormant)
                 return;
+            _titleDim = false;
             SetupWindowWithIcon();
+            UnityMcpPluginEditor.ConnectionState
+                .ObserveOnCurrentSynchronizationContext()
+                .Subscribe(OnTitleState)
+                .AddTo(_titleSubscription);
+        }
+
+        private void OnTitleState(HubConnectionState state)
+        {
+            var dim = state != HubConnectionState.Connected;
+            if (dim == _titleDim)
+                return;
+            _titleDim = dim;
+            SetupWindowWithIcon(dim: dim);
         }
 
         private void OnDisable()
         {
+            _titleSubscription.Clear();
             Unbind();
             if (_rain != null)
             {
@@ -163,19 +180,9 @@ namespace Feeder.MCP.Editor.UI
             }
 
             BuildChips();
-            ApplyMono(bridgeRoot);
+            BridgeFont.Apply(bridgeRoot);
             Bind();
             Refresh();
-        }
-
-        private static void ApplyMono(VisualElement root)
-        {
-            var asset = BridgeFont.Get();
-            if (asset == null)
-                return;
-            var definition = new StyleFontDefinition(FontDefinition.FromSDFFont(asset));
-            foreach (var text in root.Query<UnityEngine.UIElements.TextElement>().ToList())
-                text.style.unityFontDefinition = definition;
         }
 
         private void Bind()
@@ -451,6 +458,7 @@ namespace Feeder.MCP.Editor.UI
                 menu.AddDisabledItem(new GUIContent("Change port"));
             foreach (var level in _menuLogLevels)
                 menu.AddItem(new GUIContent("Logging/" + level), UnityMcpPluginEditor.LogLevel == level, SetLogLevel, level);
+            menu.AddItem(new GUIContent("Skills"), false, MenuItems.ShowSkills);
             menu.AddItem(new GUIContent("Rain"), MatrixSpaceSettings.RainBackground.Value, ToggleRain);
             menu.AddSeparator(string.Empty);
             menu.AddItem(new GUIContent("Open logs"), false, MenuItems.OpenServerLogs);
@@ -492,7 +500,7 @@ namespace Feeder.MCP.Editor.UI
 
             var field = new TextField { value = UnityMcpPluginEditor.Port.ToString() };
             field.AddToClassList("mb-port");
-            ApplyMono(field);
+            BridgeFont.Apply(field);
             field.RegisterCallback<KeyDownEvent>(OnPortKey);
             field.RegisterCallback<FocusOutEvent>(OnPortFocusOut);
             _core.Insert(_core.IndexOf(_address), field);

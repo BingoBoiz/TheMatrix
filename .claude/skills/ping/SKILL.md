@@ -17,7 +17,7 @@ No I/O, no Unity API calls — pure echo. Ideal for measuring round-trip latency
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json

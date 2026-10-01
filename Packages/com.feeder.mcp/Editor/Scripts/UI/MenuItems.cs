@@ -11,19 +11,32 @@ namespace Feeder.MCP.Editor.UI
 {
     public static class MenuItems
     {
-        [MenuItem("Tools/Feeder/Matrix Bridge", priority = -18)]
-        public static void ShowWindow() => MatrixBridgeWindow.ShowWindow();
-
-        [MenuItem("Tools/Feeder/Matrix Space", priority = -17)]
-        public static void ShowMatrixSpace() => MatrixSpaceWindow.ShowWindow();
-
-        [MenuItem("Tools/Feeder/Matrix Setup", priority = -16)]
+        [MenuItem("Tools/Feeder/Setup...", priority = -20)]
         public static void RunMatrixSetup() => MatrixSetup.Run();
 
-        [MenuItem("Tools/Feeder/MCP/Server/Reinstall Binaries", priority = 1000)]
+        [MenuItem("Tools/Feeder/Skills", priority = -19)]
+        public static void ShowSkills() => MatrixSkillsWindow.ShowWindow();
+
+        [MenuItem("Tools/Feeder/Bridge", priority = -18)]
+        public static void ShowWindow() => MatrixBridgeWindow.ShowWindow();
+
+        [MenuItem("Tools/Feeder/Space (experimental)", priority = -17)]
+        public static void ShowMatrixSpace() => MatrixSpaceWindow.ShowWindow();
+
+        [MenuItem("Tools/Feeder/Skills", true)]
+        [MenuItem("Tools/Feeder/Bridge", true)]
+        [MenuItem("Tools/Feeder/Space (experimental)", true)]
+        [MenuItem("Tools/Feeder/Server/Reinstall Binaries", true)]
+        [MenuItem("Tools/Feeder/Server/Delete Binaries", true)]
+        [MenuItem("Tools/Feeder/Server/Open Logs", true)]
+        [MenuItem("Tools/Feeder/Server/Launch MCP Inspector", true)]
+        [MenuItem("Tools/Feeder/Server/Reset Config", true)]
+        private static bool IsSetUp() => MatrixActivation.IsEnabled;
+
+        [MenuItem("Tools/Feeder/Server/Reinstall Binaries", priority = 1000)]
         public static Task ReinstallServer() => McpServerManager.InstallServerBinaryIfNeeded(force: true);
 
-        [MenuItem("Tools/Feeder/MCP/Server/Delete Binaries", priority = 1001)]
+        [MenuItem("Tools/Feeder/Server/Delete Binaries", priority = 1001)]
         public static void DeleteServer()
         {
             var result = McpServerManager.DeleteBinaryFolderIfExists();
@@ -51,7 +64,7 @@ namespace Feeder.MCP.Editor.UI
             }
         }
 
-        [MenuItem("Tools/Feeder/MCP/Server/Open Logs", priority = 1002)]
+        [MenuItem("Tools/Feeder/Server/Open Logs", priority = 1002)]
         public static void OpenServerLogs()
         {
             var folder = Path.Combine(
@@ -64,7 +77,7 @@ namespace Feeder.MCP.Editor.UI
             EditorUtility.RevealInFinder(folder);
         }
 
-        [MenuItem("Tools/Feeder/MCP/Server/Launch MCP Inspector", priority = 1004)]
+        [MenuItem("Tools/Feeder/Server/Launch MCP Inspector", priority = 1004)]
         public static void LaunchMcpInspector()
         {
             if (UnityMcpPluginEditor.TransportMethod != TransportMethod.streamableHttp)
@@ -136,7 +149,7 @@ namespace Feeder.MCP.Editor.UI
             }
         }
 
-        [MenuItem("Tools/Feeder/MCP/Reset Config", priority = 2020)]
+        [MenuItem("Tools/Feeder/Server/Reset Config", priority = 2020)]
         public static void ResetConfig()
         {
             UnityMcpPluginEditor.ResetConfig();

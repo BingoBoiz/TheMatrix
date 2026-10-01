@@ -67,6 +67,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
             "Do not ask a clarifying question when the intent can be inferred safely from the repository and supplied context. " +
             "Ask only when a missing choice would materially change the result and cannot be discovered locally. " +
             "If a tool is cancelled, unavailable, times out, or returns an error, use safe local inspection or another applicable tool and continue; " +
+            "a Unity tool missing from your list may only be disabled, so call unity-tool-list and then tool-set-enabled-state before giving up; " +
             "one failed tool call is not task completion. Preserve unrelated existing changes. " +
             "Do not claim a requested code change is complete unless code was actually changed and proportionately verified.";
 

@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Button class="sk-group">
+        <ui:VisualElement class="sk-group__bar" picking-mode="Ignore" />
+        <ui:Label name="sk-group-mono" class="sk-group__mono sk-mono" picking-mode="Ignore" />
+        <ui:Label name="sk-group-name" class="sk-group__name" picking-mode="Ignore" />
+        <ui:Label name="sk-group-count" class="sk-group__count sk-mono" picking-mode="Ignore" />
+    </ui:Button>
+</ui:UXML>

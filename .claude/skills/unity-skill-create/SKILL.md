@@ -147,7 +147,7 @@ All Unity API calls (including `GameObject.Find`, `AssetDatabase`, `EditorUtilit
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json

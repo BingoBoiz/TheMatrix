@@ -1,0 +1,46 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" editor-extension-mode="True">
+    <ui:VisualElement name="sk-root" class="sk-root">
+        <ui:VisualElement class="sk-side">
+            <ui:VisualElement class="sk-side__head">
+                <ui:Label text="Skills" class="sk-side__title" />
+                <ui:Label name="sk-side-count" class="sk-side__count" />
+            </ui:VisualElement>
+            <ui:ScrollView name="sk-groups" class="sk-side__list" horizontal-scroller-visibility="Hidden" />
+            <ui:VisualElement class="sk-side__foot">
+                <ui:VisualElement name="sk-sync-dot" class="sk-dot" />
+                <ui:Label name="sk-sync" class="sk-side__sync" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement class="sk-main">
+            <ui:VisualElement class="sk-head">
+                <ui:Label name="sk-title" class="sk-head__title" />
+                <ui:Label name="sk-subtitle" class="sk-head__sub" />
+            </ui:VisualElement>
+            <ui:VisualElement class="sk-bar">
+                <uie:ToolbarSearchField name="sk-search" class="sk-search" />
+                <ui:VisualElement name="sk-filter-slot" />
+            </ui:VisualElement>
+            <ui:ScrollView name="sk-list" class="sk-list" horizontal-scroller-visibility="Hidden" />
+            <ui:VisualElement class="sk-foot">
+                <ui:VisualElement class="sk-foot__stat">
+                    <ui:VisualElement name="sk-meter" class="sk-meter">
+                        <ui:VisualElement name="sk-meter-fill" class="sk-meter__fill" />
+                        <ui:VisualElement name="sk-tick-lean" class="sk-meter__tick" />
+                        <ui:VisualElement name="sk-tick-heavy" class="sk-meter__tick" />
+                    </ui:VisualElement>
+                    <ui:Label name="sk-cost" class="sk-foot__cost" tooltip="Tokens these skills add to every request while they are on." />
+                    <ui:Label name="sk-tier" class="sk-foot__tier" />
+                </ui:VisualElement>
+                <ui:VisualElement class="sk-foot__actions">
+                    <ui:Button name="sk-core" text="Core only" class="sk-btn" />
+                    <ui:Button name="sk-all" text="Enable all" class="sk-btn" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="sk-off" class="sk-off">
+            <ui:Label text="MATRIX IS OFF" class="sk-off__title" />
+            <ui:Label text="Skills are managed by the local bridge. Set Matrix up to list and switch them." class="sk-off__text" />
+            <ui:Button name="sk-setup" text="Set up Matrix" class="sk-btn sk-btn--primary" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

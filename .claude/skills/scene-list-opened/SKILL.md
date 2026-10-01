@@ -13,7 +13,7 @@ Maps `OpenedScenes` through `ToSceneDataShallow()` on the main thread and return
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json

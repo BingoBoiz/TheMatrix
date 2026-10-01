@@ -86,3 +86,4 @@ crashlytics-build.properties
 
 # Matrix MCP: per-machine files (the port derives from the project path)
 /.mcp.json
+/.codex/config.toml

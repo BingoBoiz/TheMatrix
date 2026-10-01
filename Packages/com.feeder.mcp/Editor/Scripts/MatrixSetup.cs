@@ -23,13 +23,13 @@ namespace Feeder.MCP.Editor
         const string ConfirmMessage =
             "Turn Matrix MCP on for this project and prepare this machine:\n\n" +
             "- Start the local server and connect the editor (Matrix does nothing until this runs)\n" +
-            "- Ignore .mcp.json in .gitignore (its port differs per machine)\n" +
+            "- Ignore .mcp.json and .codex/config.toml in .gitignore (their port differs per machine)\n" +
             "- Keep only the core MCP tools enabled to save tokens; tool-set-enabled-state turns more on when needed\n" +
             "- Write the Claude Code MCP config, then install or verify the Claude Code CLI (Node.js is installed with winget if missing)";
 
-        static readonly string[] MachineSpecificFiles = { ".mcp.json" };
+        static readonly string[] MachineSpecificFiles = { ".mcp.json", ".codex/config.toml" };
 
-        static readonly string[] CoreTools =
+        internal static readonly string[] CoreTools =
         {
             "unity-tool-list",
             "tool-set-enabled-state",
@@ -53,7 +53,7 @@ namespace Feeder.MCP.Editor
             var message = string.Join("\n\n", new[]
             {
                 Step("Git", IgnoreMachineSpecificFiles),
-                Step("Tools", ApplyCoreTools),
+                Step("Tools", () => ApplyToolSet(all: false)),
                 Step("Claude Code", StartClaudeSetup),
             });
 
@@ -132,11 +132,11 @@ namespace Feeder.MCP.Editor
                 && SetupCommandRunner.Run(git, $"-C \"{root}\" ls-files --error-unmatch -- \"{file}\"", _ => { }, 10000) == 0;
         }
 
-        static string ApplyCoreTools()
+        internal static string ApplyToolSet(bool all)
         {
             var manager = UnityMcpPluginEditor.Instance.Tools;
             if (manager == null)
-                return "Tools: the MCP plugin is not running - open Tools > Feeder > Matrix Bridge, then run setup again";
+                return "Tools: the MCP plugin is not running - open Tools > Feeder > Bridge, then run Setup again";
 
             var tools = manager.GetAllTools().Where(tool => tool.Name != null).ToList();
             var registered = new HashSet<string>(tools.Select(tool => tool.Name!), StringComparer.OrdinalIgnoreCase);
@@ -147,7 +147,7 @@ namespace Feeder.MCP.Editor
             var changed = 0;
             foreach (var tool in tools)
             {
-                var enable = CoreTools.Contains(tool.Name!, StringComparer.OrdinalIgnoreCase);
+                var enable = all || CoreTools.Contains(tool.Name!, StringComparer.OrdinalIgnoreCase);
                 if (manager.IsToolEnabled(tool.Name!) == enable)
                     continue;
 
@@ -158,7 +158,8 @@ namespace Feeder.MCP.Editor
             if (changed > 0)
                 UnityMcpPluginEditor.Instance.Save();
 
-            return $"Tools: {CoreTools.Length} core tools enabled, {changed} changed, about {tokensBefore} -> {EnabledTokens(manager, tools)} tokens per request";
+            var label = all ? $"all {tools.Count} tools" : $"{CoreTools.Length} core tools";
+            return $"Tools: {label} enabled, {changed} changed, about {tokensBefore} -> {EnabledTokens(manager, tools)} tokens per request";
         }
 
         static int EnabledTokens(IToolManager manager, IEnumerable<IRunTool> tools)
@@ -167,7 +168,7 @@ namespace Feeder.MCP.Editor
         static string StartClaudeSetup()
         {
             if (AgentSetupService.IsAnyRunning)
-                return "Claude Code: another agent setup is running - run Matrix Setup again when it finishes";
+                return "Claude Code: another agent setup is running - run Setup again when it finishes";
 
             AgentSetupService.RunSetup(AgentBackendCatalog.Get(ClaudePresetId));
             return "Claude Code: MCP config, CLI check and verify are running - progress is in the Console and Matrix Space > CONFIG > AGENTS";

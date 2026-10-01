@@ -38,7 +38,8 @@ namespace Feeder.MCP.Editor.API
             ReadOnlyHint = true,
             IdempotentHint = true
         )]
-        [AiSkillDescription("List all Feeder MCP tools registered in the connected Unity Editor instance. " +
+        [AiSkillDescription("List all Feeder MCP tools registered in the connected Unity Editor instance, including disabled ones " +
+            "(see `enabled`); only a core set is on by default, so use this to find a tool, then enable it with tool-set-enabled-state. " +
             "Optional regex filter matches against tool name, description, and argument names/descriptions. " +
             "Use the `includeDescription` / `includeInputs` toggles to control the response size.")]
         [AiSkillBody("List all Feeder MCP tools registered in the connected Unity Editor instance. " +
@@ -51,7 +52,8 @@ namespace Feeder.MCP.Editor.API
             "## Behavior\n\n" +
             "Iterates `UnityMcpPluginEditor.Instance.Tools.GetAllTools()`, evaluates the filter (if any), and projects " +
             "each surviving tool into a `ToolInfoData` honoring the verbosity toggles.")]
-        [Description("List all Feeder MCP tools registered in the connected Unity Editor instance. " +
+        [Description("List all Feeder MCP tools registered in the connected Unity Editor instance, including disabled ones " +
+            "(see `enabled`). Only a core set is enabled to save tokens; turn another on with tool-set-enabled-state. " +
             "Optionally filter by regex across tool names, descriptions, and arguments.")]
         public ToolInfoData[] List
         (
@@ -101,7 +103,7 @@ namespace Feeder.MCP.Editor.API
                             continue;
                     }
 
-                    var info = new ToolInfoData { Name = tool.Name };
+                    var info = new ToolInfoData { Name = tool.Name, Enabled = tool.Enabled };
 
                     if (descriptionRequested)
                         info.Description = tool.Description;

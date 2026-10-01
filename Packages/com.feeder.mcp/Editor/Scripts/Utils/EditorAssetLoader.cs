@@ -14,6 +14,7 @@ namespace Feeder.MCP.Editor.Utils
         private const string PackagePathPrefix = "Packages/com.feeder.mcp/";
         private const string AssetsPathPrefix = "Packages/com.feeder.mcp/";
         private const string LogoIconRelativePath = "Editor/Gizmos/logo_window_icon.png";
+        private const string LogoOffIconRelativePath = "Editor/Gizmos/logo_window_icon_off.png";
 
         /// <summary>
         /// Full package path to the logo icon. Usable in compile-time attributes (e.g., [Icon]).
@@ -21,6 +22,8 @@ namespace Feeder.MCP.Editor.Utils
         public const string PackageLogoIconPath = PackagePathPrefix + LogoIconRelativePath;
 
         public static readonly string[] PackageLogoIcon = GetEditorAssetPaths(LogoIconRelativePath);
+
+        public static readonly string[] PackageLogoIconOff = GetEditorAssetPaths(LogoOffIconRelativePath);
 
         /// <summary>
         /// Generates an array of paths for an editor asset, with both package and development paths.

@@ -25,7 +25,7 @@ Supply `paths` (a list of paths) to read only the listed fields/elements via `Re
 
 ## How to Call
 
-Call this tool through the MCP client connected to the local Matrix AI Connector server.
+Call this tool through the MCP client connected to the local Matrix Bridge server.
 
 Example input:
 ```json

@@ -2,15 +2,21 @@
     "name": "Feeder.MCP.Editor.Tests",
     "rootNamespace": "Feeder.MCP.Editor.Tests",
     "references": [
-        "Feeder.MCP.Editor"
+        "Feeder.MCP.Editor",
+        "Feeder.MCP.Runtime",
+        "Feeder.McpPlugin",
+        "Feeder.McpPlugin.Common"
     ],
     "includePlatforms": [
         "Editor"
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "Microsoft.Extensions.Logging.Abstractions.dll"
+    ],
     "autoReferenced": false,
     "defineConstraints": [],
     "versionDefines": [],

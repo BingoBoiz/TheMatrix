@@ -1,7 +1,5 @@
 #nullable enable
 using System.Collections.Generic;
-using System.IO;
-using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
 using AgentConfig = Feeder.McpPlugin.AgentConfig;
 using TransportMethod = Feeder.McpPlugin.Common.Consts.MCP.Server.TransportMethod;
@@ -17,11 +15,12 @@ namespace Feeder.MCP.Editor.UI
     /// Claude Code by <see cref="AiAgentCatalog"/>.
     ///
     /// Configuration surface:
-    /// - MCP entry: the standard project-root <c>.mcp.json</c> (identical shape Claude Code
-    ///   writes — <c>mcpServers.Feeder-MCP</c> with type http/stdio), which DeepSeek-family
-    ///   clients consume.
+    /// - MCP entry: none. DeepSeek Harness does not read <c>.mcp.json</c> (it takes its MCP
+    ///   servers from its own plugin config), and that file's single <c>mcpServers.Feeder-MCP</c>
+    ///   entry belongs to Claude Code: sharing it made the two chips switch on and off together.
     /// - Skills: generated into the project's <c>.agents/skills</c> folder — the folder
-    ///   DeepSeek Harness (and Codex-class agents) read skills from.
+    ///   DeepSeek Harness (and Codex-class agents) read skills from. Whether DeepSeek is on is
+    ///   its own auto-configure flag, never a file on disk.
     /// </summary>
     public sealed class DeepSeekAiAgentConfigurator : AgentConfig.AiAgentConfigurator
     {
@@ -38,62 +37,35 @@ namespace Feeder.MCP.Editor.UI
         public override string DownloadLinkLabel => "DeepSeek";
 
         protected override AgentConfig.AiAgentConfig CreateStdioConfig(
-            AgentConfig.AgentConfiguratorSettings settings, ILogger logger)
-        {
-            var config = new AgentConfig.JsonAiAgentConfig(
-                AgentConfig.AiAgentConfig.DefaultMcpServerName,
-                Path.Combine(settings.ProjectRootPath, ".mcp.json"), "mcpServers", logger);
-
-            // Use the resolved executable path (like the shared Claude Code configurator does),
-            // not the bare name — the server binary lives under Library/mcp-server and is not on PATH.
-            // JsonSerializer.Serialize produces a properly escaped JSON string (Windows paths
-            // contain backslashes that must not be interpreted as JSON escapes).
-            config.SetProperty("command",
-                JsonNode.Parse(System.Text.Json.JsonSerializer.Serialize(settings.ExecutableFullPath)),
-                requiredForConfiguration: true, AgentConfig.ValueComparisonMode.Path);
-            config.SetProperty("args", JsonNode.Parse(
-                    $"[{string.Join(",", BuildStdioArgs(settings))}]"),
-                requiredForConfiguration: true, AgentConfig.ValueComparisonMode.Exact);
-
-            if (settings.IsStdioAuthRequired)
-                config.ApplyStdioAuthorization(true, settings.Token);
-            return config;
-        }
+            AgentConfig.AgentConfiguratorSettings settings, ILogger? logger)
+            => CreateConfig(settings);
 
         protected override AgentConfig.AiAgentConfig CreateHttpConfig(
-            AgentConfig.AgentConfiguratorSettings settings, ILogger logger)
-        {
-            var config = new AgentConfig.JsonAiAgentConfig(
-                AgentConfig.AiAgentConfig.DefaultMcpServerName,
-                Path.Combine(settings.ProjectRootPath, ".mcp.json"), "mcpServers", logger);
-
-            config.SetProperty("type", JsonNode.Parse("\"http\""),
-                requiredForConfiguration: true, AgentConfig.ValueComparisonMode.Exact);
-            config.SetProperty("url", JsonNode.Parse($"\"{settings.Host}\""),
-                requiredForConfiguration: true, AgentConfig.ValueComparisonMode.Url);
-
-            if (settings.IsHttpAuthRequired)
-                config.ApplyHttpAuthorization(true, settings.Token);
-            return config;
-        }
+            AgentConfig.AgentConfiguratorSettings settings, ILogger? logger)
+            => CreateConfig(settings);
 
         protected override IReadOnlyList<AgentConfig.ConfigurationSection> BuildSections(
-            AgentConfig.AgentConfiguratorSettings settings, TransportMethod transport, ILogger logger)
-            => DefaultConfigurationSections(settings, transport, logger);
+            AgentConfig.AgentConfiguratorSettings settings, TransportMethod transport, ILogger? logger)
+            => System.Array.Empty<AgentConfig.ConfigurationSection>();
 
-        /// <summary>
-        /// Builds the stdio launch arguments exactly like the shared library does for Claude Code
-        /// (<c>port</c>, <c>plugin-timeout</c>, <c>client-transport=stdio</c>, <c>authorization</c>),
-        /// so the written <c>.mcp.json</c> entry matches Claude Code's for the same settings —
-        /// except <c>command</c>, which uses the resolved executable path (see
-        /// <see cref="CreateStdioConfig"/>).
-        /// </summary>
-        static IEnumerable<string> BuildStdioArgs(AgentConfig.AgentConfiguratorSettings settings)
+        AgentConfig.AiAgentConfig CreateConfig(AgentConfig.AgentConfiguratorSettings settings)
+            => new SkillsOnlyAgentConfig(AgentName, ResolveAbsoluteSkillsPath(settings.ProjectRootPath, SkillsPath));
+
+        sealed class SkillsOnlyAgentConfig : AgentConfig.AiAgentConfig
         {
-            yield return $"\"port={settings.Port}\"";
-            yield return $"\"plugin-timeout={settings.TimeoutMs}\"";
-            yield return "\"client-transport=stdio\"";
-            yield return $"\"authorization={settings.AuthOption.ToString().ToLowerInvariant()}\"";
+            public SkillsOnlyAgentConfig(string name, string skillsFolder) : base(name, skillsFolder)
+            {
+            }
+
+            public override string ExpectedFileContent => string.Empty;
+
+            public override bool Configure() => true;
+
+            public override bool Unconfigure() => true;
+
+            public override bool IsDetected() => IsConfigured();
+
+            public override bool IsConfigured() => UnityMcpPluginEditor.IsAutoConfigureAgent(DeepSeekAiAgentConfigurator.Id);
         }
     }
 }

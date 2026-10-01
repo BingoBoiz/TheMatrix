@@ -2,6 +2,42 @@
 
 All notable changes to this package are documented here.
 
+## [Unreleased]
+
+### Added
+
+- Skill `matrix-shared-editor`: the protocol for several agents and people on one Editor - an
+  `agent-editor-lock` claim before compiling or playing, and a written test-case handoff when the
+  Editor is busy. It is a convention between sessions; Matrix does not enforce it yet.
+- **Tools > Feeder > Skills** (also in the Matrix Bridge `...` menu): a window with one switch per MCP
+  tool, grouped by area, with a search box, an On/Off filter, the tokens each tool adds to every request
+  and a meter for the total. A tool that works with another says so when that one is off. **Core only**
+  and **Enable all** ask first, since enabling everything costs about 50k tokens per request. Switching a
+  tool rewrites the skill files after a second; reconnect the AI client afterwards.
+- The Matrix Bridge tab icon dims while the editor is not linked.
+
+### Changed
+
+- The **Tools > Feeder** menu is shorter: Setup..., Skills, Bridge, Space (experimental) and Server (the
+  old MCP submenu, now with Reset Config and Debug inside it). Until Matrix is turned on, only Setup...
+  works and the other items are greyed out. The windows are still called Matrix Bridge and Matrix Space.
+- `unity-tool-list` now reports whether each tool is enabled, and its description says that only a core set is on by default.
+- Skill files are written only for enabled tools, and the folders of disabled tools are removed, so the
+  lean tool set no longer ships 70 skills for tools the agent cannot call. Turn a tool on with
+  `tool-set-enabled-state`, then run `unity-skill-generate`; skills also refresh on every editor load.
+  A project that tracks `.claude/skills` or `.agents/skills` in git sees the disabled tools' skill folders
+  deleted on the next refresh.
+- Matrix Space agents are told to call `unity-tool-list` and `tool-set-enabled-state` when a Unity tool
+  is missing from their list.
+- Matrix Setup also gitignores `.codex/config.toml`, which holds this machine's port.
+
+### Fixed
+
+- Matrix Bridge: clicking `claude` or `deepseek` no longer switches both on and off. DeepSeek used to
+  share Claude Code's `.mcp.json` entry, which DeepSeek Harness does not read. Its click now only keeps
+  the skills in `.agents/skills` current, and its on/off state is its own. Add the bridge to DeepSeek
+  Harness through its own MCP configuration.
+
 ## [0.87.1] - 2026-09-30
 
 ### Fixed

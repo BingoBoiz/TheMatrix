@@ -16,6 +16,10 @@ namespace AIGD
         [Description("Tool name.")]
         public string Name { get; set; } = string.Empty;
 
+        [JsonInclude, JsonPropertyName("enabled")]
+        [Description("Whether the tool is enabled. A disabled tool is registered but cannot be called until tool-set-enabled-state turns it on.")]
+        public bool Enabled { get; set; }
+
         [JsonInclude, JsonPropertyName("description")]
         [Description("Tool description.")]
         public string? Description { get; set; }

@@ -26,9 +26,9 @@ namespace Feeder.MCP.Editor.UI
             Logger = UnityLoggerFactory.LoggerFactory.CreateLogger(GetType().Name);
         }
 
-        protected void SetupWindowWithIcon(string? customTitle = null)
+        protected void SetupWindowWithIcon(string? customTitle = null, bool dim = false)
         {
-            var icon = EditorAssetLoader.LoadAssetAtPath<Texture>(EditorAssetLoader.PackageLogoIcon);
+            var icon = EditorAssetLoader.LoadAssetAtPath<Texture>(dim ? EditorAssetLoader.PackageLogoIconOff : EditorAssetLoader.PackageLogoIcon);
             if (icon != null)
                 titleContent = new GUIContent(customTitle ?? WindowTitle, icon);
         }

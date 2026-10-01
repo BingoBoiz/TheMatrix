@@ -173,13 +173,16 @@ public class McpPlugin : IMcpPlugin, IConnection, IDisposable
 	{
 		string skillsPath = ResolveSkillsPath(path);
 		bool result = true;
-		IEnumerable<IRunTool> enumerable = McpManager.ToolManager?.GetAllTools();
+		IToolManager? toolManager = McpManager.ToolManager;
+		IEnumerable<IRunTool> enumerable = toolManager?.GetAllTools();
 		if (enumerable == null)
 		{
 			result = false;
 		}
 		else
 		{
+			List<IRunTool> disabledTools = enumerable.Where((IRunTool tool) => !toolManager!.IsToolEnabled(tool.Name)).ToList();
+			enumerable = enumerable.Except(disabledTools);
 			IEnumerable<IRunTool> enumerable2 = McpManager.SystemToolManager?.GetAllTools();
 			IEnumerable<IRunTool> enumerable4;
 			if (enumerable2 == null)
@@ -193,6 +196,10 @@ public class McpPlugin : IMcpPlugin, IConnection, IDisposable
 			}
 			IEnumerable<IRunTool> tools = enumerable4;
 			if (!_skillFileGenerator.Generate(tools, skillsPath, _connectionConfig.Host))
+			{
+				result = false;
+			}
+			if (disabledTools.Count > 0 && !_skillFileGenerator.Delete(disabledTools, skillsPath))
 			{
 				result = false;
 			}

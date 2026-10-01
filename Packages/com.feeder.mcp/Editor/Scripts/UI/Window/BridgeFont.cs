@@ -2,6 +2,7 @@
 using System.Linq;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
+using UnityEngine.UIElements;
 
 namespace Feeder.MCP.Editor.UI
 {
@@ -10,6 +11,20 @@ namespace Feeder.MCP.Editor.UI
         internal const string AssetName = "MatrixBridgeMono";
 
         static readonly string[] _families = { "Consolas", "Cascadia Mono", "Menlo", "DejaVu Sans Mono", "Courier New" };
+
+        internal static void Apply(VisualElement root, string? className = null)
+        {
+            var asset = Get();
+            if (asset == null)
+                return;
+
+            var definition = new StyleFontDefinition(FontDefinition.FromSDFFont(asset));
+            var query = className == null
+                ? root.Query<UnityEngine.UIElements.TextElement>()
+                : root.Query<UnityEngine.UIElements.TextElement>(className: className);
+            foreach (var text in query.ToList())
+                text.style.unityFontDefinition = definition;
+        }
 
         internal static FontAsset? Get(string name = AssetName)
         {

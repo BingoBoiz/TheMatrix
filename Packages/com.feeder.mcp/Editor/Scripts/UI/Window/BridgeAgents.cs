@@ -107,6 +107,21 @@ namespace Feeder.MCP.Editor.UI
             }
         }
 
+        public static int RegenerateSkills()
+        {
+            var count = 0;
+            foreach (var agentId in UnityMcpPluginEditor.AutoConfigureAgentIds)
+            {
+                var agent = AiAgentCatalog.GetByAgentId(agentId);
+                if (agent?.SupportsSkills != true || !UnityMcpPluginEditor.IsAutoGenerateSkills(agent.AgentId))
+                    continue;
+
+                GenerateSkills(agent);
+                count++;
+            }
+            return count;
+        }
+
         static void Unwire(AgentConfig.AiAgentConfigurator agent)
         {
             var settings = AgentConfiguratorSettingsFactory.Create();
