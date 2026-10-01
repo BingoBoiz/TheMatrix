@@ -29,9 +29,13 @@ public class McpToolManager : IToolManager, IClientToolHub, IDisposable
 
 	private readonly Subject<Unit> _onToolsUpdated;
 
+	private readonly Subject<ToolCallActivity> _onToolCall;
+
 	public Reflector Reflector => _reflector;
 
 	public Observable<Unit> OnToolsUpdated => (Observable<Unit>)(object)_onToolsUpdated;
+
+	public Observable<ToolCallActivity> OnToolCall => _onToolCall;
 
 	public ulong ToolCallsCount => (ulong)Interlocked.Read(ref Unsafe.As<ulong, long>(ref toolCallsCount));
 
@@ -50,6 +54,7 @@ public class McpToolManager : IToolManager, IClientToolHub, IDisposable
 	{
 		_disposables = new CompositeDisposable();
 		_onToolsUpdated = new Subject<Unit>();
+		_onToolCall = new Subject<ToolCallActivity>();
 		_logger = logger ?? throw new ArgumentNullException("logger");
 		_logger.LogTrace("Ctor");
 		_reflector = reflector ?? throw new ArgumentNullException("reflector");
@@ -149,7 +154,7 @@ public class McpToolManager : IToolManager, IClientToolHub, IDisposable
 				string message = ((data.Arguments == null) ? ("Run tool '" + data.Name + "' with no parameters.") : string.Format("Run tool '{0}' with parameters[{1}]:\n{2}\n", data.Name, data.Arguments.Count, string.Join(",\n", data.Arguments)));
 				_logger.LogInformation(message);
 			}
-			ResponseCallTool responseCallTool = await value.Run(data.RequestID, data.Arguments, cancellationToken);
+			ResponseCallTool responseCallTool = await RunTool(value, data.RequestID, data.Arguments, cancellationToken);
 			if (responseCallTool == null)
 			{
 				return ResponseData<ResponseCallTool>.Error(data.RequestID, "Tool '" + data.Name + "' returned null result.").Log(_logger);
@@ -160,6 +165,19 @@ public class McpToolManager : IToolManager, IClientToolHub, IDisposable
 		catch (Exception ex)
 		{
 			return ResponseData<ResponseCallTool>.Error(data.RequestID, $"Failed to run tool '{data.Name}'. Exception: {ex}").Log(_logger, "RunCallTool[" + data.Name + "]", ex);
+		}
+	}
+
+	public async Task<ResponseCallTool> RunTool(IRunTool tool, string requestId, IReadOnlyDictionary<string, JsonElement>? namedParameters, CancellationToken cancellationToken = default(CancellationToken))
+	{
+		_onToolCall.OnNext(new ToolCallActivity(tool.Name, tool.ReadOnlyHint, tool.DestructiveHint, finished: false));
+		try
+		{
+			return await tool.Run(requestId, namedParameters, cancellationToken);
+		}
+		finally
+		{
+			_onToolCall.OnNext(new ToolCallActivity(tool.Name, tool.ReadOnlyHint, tool.DestructiveHint, finished: true));
 		}
 	}
 
@@ -219,6 +237,7 @@ public class McpToolManager : IToolManager, IClientToolHub, IDisposable
 	public void Dispose()
 	{
 		_disposables.Dispose();
+		_onToolCall.Dispose();
 		_tools.Clear();
 	}
 }

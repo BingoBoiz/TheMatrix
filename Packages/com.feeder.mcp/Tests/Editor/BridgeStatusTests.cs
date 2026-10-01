@@ -23,6 +23,17 @@ namespace Feeder.MCP.Editor.Tests
             Assert.AreEqual(expected, BridgeStatus.Resolve(keep, connected, connecting, server, error));
         }
 
+        [TestCase(true, true, false, null, false, true, BridgePhase.Working)]
+        [TestCase(true, false, false, null, false, true, BridgePhase.Linking)]
+        [TestCase(true, true, false, null, true, true, BridgePhase.PlayTesting)]
+        [TestCase(true, false, true, null, true, false, BridgePhase.PlayTesting)]
+        [TestCase(false, false, false, null, true, false, BridgePhase.Offline)]
+        [TestCase(true, true, false, "install failed", true, true, BridgePhase.Fault)]
+        public void Resolve_AgentActivity_ReturnsExpectedPhase(bool keep, bool connected, bool connecting, string? error, bool agentPlay, bool working, BridgePhase expected)
+        {
+            Assert.AreEqual(expected, BridgeStatus.Resolve(keep, connected, connecting, McpServerStatus.Running, error, agentPlay, working));
+        }
+
         [Test]
         public void Resolve_EmptyInstallError_IsNotAFault()
         {
@@ -46,6 +57,7 @@ namespace Feeder.MCP.Editor.Tests
         {
             Assert.Less(BridgeStatus.RainEnergy(BridgePhase.Offline), BridgeStatus.RainEnergy(BridgePhase.Linking));
             Assert.Less(BridgeStatus.RainEnergy(BridgePhase.Linking), BridgeStatus.RainEnergy(BridgePhase.Online));
+            Assert.Less(BridgeStatus.RainEnergy(BridgePhase.Online), BridgeStatus.RainEnergy(BridgePhase.Working));
             Assert.Less(BridgeStatus.RainEnergy(BridgePhase.Fault), BridgeStatus.RainEnergy(BridgePhase.Online));
         }
 

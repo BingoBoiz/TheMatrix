@@ -25,7 +25,7 @@ namespace Feeder.MCP.Editor.UI
         private static readonly string[] _windowUssPaths = EditorAssetLoader.GetEditorAssetPaths("Editor/UI/uss/MatrixBridge.uss");
         private static readonly string[] _phaseClasses =
         {
-            "mb-state--offline", "mb-state--linking", "mb-state--online", "mb-state--fault",
+            "mb-state--offline", "mb-state--linking", "mb-state--online", "mb-state--working", "mb-state--playtest", "mb-state--fault",
         };
         private static readonly LogLevel[] _menuLogLevels =
         {
@@ -60,6 +60,7 @@ namespace Feeder.MCP.Editor.UI
         private MatrixRainRenderer? _rain;
         private IMGUIContainer? _rainView;
         private IVisualElementScheduledItem? _rainTick;
+        private IVisualElementScheduledItem? _workingExpiry;
         private double _lastEnergyStep;
         private float _energy = 0.08f;
         private float _energyTarget = 0.08f;
@@ -199,6 +200,9 @@ namespace Feeder.MCP.Editor.UI
                 .ObserveOnCurrentSynchronizationContext()
                 .Subscribe(OnInstallError)
                 .AddTo(_subscriptions);
+            AgentActivity.Changed
+                .Subscribe(OnAgentActivity)
+                .AddTo(_subscriptions);
             _subscriptions.Add(UnityMcpPluginEditor.SubscribeOnChanged(OnConfigChanged, invokeImmediately: false));
             UnityMcpPluginEditor.PluginProperty
                 .WhereNotNull()
@@ -213,6 +217,8 @@ namespace Feeder.MCP.Editor.UI
             _clientsSubscription = null;
             _rainTick?.Pause();
             _rainTick = null;
+            _workingExpiry?.Pause();
+            _workingExpiry = null;
             _rainView = null;
             _chipViews.Clear();
             _portField = null;
@@ -225,6 +231,8 @@ namespace Feeder.MCP.Editor.UI
         private void OnInstallError(string? error) => Refresh();
 
         private void OnConfigChanged(UnityMcpPlugin.UnityConnectionConfig config) => Refresh();
+
+        private void OnAgentActivity(Unit _) => Refresh();
 
         private void OnPlugin(IMcpPlugin plugin)
         {
@@ -254,7 +262,9 @@ namespace Feeder.MCP.Editor.UI
                 connection == HubConnectionState.Connected,
                 connection == HubConnectionState.Connecting || connection == HubConnectionState.Reconnecting,
                 McpServerManager.ServerStatus.CurrentValue,
-                McpServerManager.LastInstallError.CurrentValue);
+                McpServerManager.LastInstallError.CurrentValue,
+                AgentActivity.IsAgentPlay,
+                AgentActivity.IsWorking);
         }
 
         private void Refresh()
@@ -281,12 +291,32 @@ namespace Feeder.MCP.Editor.UI
 
             if (_note != null)
             {
-                _note.text = phase == BridgePhase.Fault ? FirstLine(fault) : string.Empty;
-                _note.EnableInClassList("mb-note--visible", phase == BridgePhase.Fault);
+                _note.text = NoteFor(phase, fault);
+                _note.EnableInClassList("mb-note--visible", _note.text.Length > 0);
             }
+
+            if (phase == BridgePhase.Working && !_previewActive)
+                ScheduleWorkingExpiry();
 
             _energyTarget = BridgeStatus.RainEnergy(phase);
             _rainTick?.Resume();
+        }
+
+        private string NoteFor(BridgePhase phase, string? fault) => phase switch
+        {
+            BridgePhase.Fault => FirstLine(fault),
+            BridgePhase.Working => FirstLine("> " + (_previewActive ? "preview" :AgentActivity.LastWriteTool)),
+            BridgePhase.PlayTesting => "agent is play testing the game",
+            _ => string.Empty,
+        };
+
+        private void ScheduleWorkingExpiry()
+        {
+            if (_state == null)
+                return;
+            _workingExpiry?.Pause();
+            var delayMs = (long)(AgentActivity.WorkingSecondsLeft * 1000) + 50;
+            _workingExpiry = _state.schedule.Execute(Refresh).StartingIn(delayMs);
         }
 
         private static string FirstLine(string? text)
@@ -307,6 +337,8 @@ namespace Feeder.MCP.Editor.UI
                     break;
                 case BridgePhase.Linking:
                 case BridgePhase.Online:
+                case BridgePhase.Working:
+                case BridgePhase.PlayTesting:
                     MatrixActivation.Disable();
                     break;
                 case BridgePhase.Fault:

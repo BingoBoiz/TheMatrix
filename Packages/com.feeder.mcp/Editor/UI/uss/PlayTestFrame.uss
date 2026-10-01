@@ -1,0 +1,26 @@
+.ptf-host {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 21px;
+    bottom: 0;
+}
+
+.ptf-frame {
+    flex-grow: 1;
+    align-items: center;
+    border-width: 3px;
+    border-color: rgb(255, 196, 64);
+}
+
+.ptf-tag {
+    margin: 0;
+    padding: 1px 10px 2px 10px;
+    font-size: 10px;
+    letter-spacing: 2px;
+    -unity-font-style: bold;
+    color: rgb(2, 6, 4);
+    background-color: rgb(255, 196, 64);
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}

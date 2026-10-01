@@ -82,6 +82,17 @@
     text-shadow: 0 0 12px rgba(0, 255, 65, 0.65);
 }
 
+.mb-state--working {
+    color: rgb(170, 255, 230);
+    text-shadow: 0 0 16px rgba(80, 255, 200, 0.8);
+}
+
+.mb-state--playtest {
+    color: rgb(255, 196, 64);
+    letter-spacing: 4px;
+    text-shadow: 0 0 14px rgba(255, 196, 64, 0.7);
+}
+
 .mb-state--fault {
     color: rgb(255, 124, 96);
     text-shadow: 0 0 6px rgba(2, 6, 4, 0.95);

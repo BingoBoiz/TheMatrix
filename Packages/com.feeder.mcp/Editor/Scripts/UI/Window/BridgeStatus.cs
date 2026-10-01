@@ -8,18 +8,23 @@ namespace Feeder.MCP.Editor.UI
         Offline,
         Linking,
         Online,
+        Working,
+        PlayTesting,
         Fault,
     }
 
     public static class BridgeStatus
     {
-        public static BridgePhase Resolve(bool keepConnected, bool connected, bool connecting, McpServerStatus server, string? installError)
+        public static BridgePhase Resolve(bool keepConnected, bool connected, bool connecting, McpServerStatus server, string? installError, bool agentPlay = false, bool working = false)
         {
             if (!string.IsNullOrEmpty(installError))
                 return BridgePhase.Fault;
+            var linking = keepConnected || connecting || server == McpServerStatus.Installing || server == McpServerStatus.Starting;
+            if (agentPlay && (connected || linking))
+                return BridgePhase.PlayTesting;
             if (connected)
-                return BridgePhase.Online;
-            if (keepConnected || connecting || server == McpServerStatus.Installing || server == McpServerStatus.Starting)
+                return working ? BridgePhase.Working : BridgePhase.Online;
+            if (linking)
                 return BridgePhase.Linking;
             return BridgePhase.Offline;
         }
@@ -29,6 +34,8 @@ namespace Feeder.MCP.Editor.UI
             BridgePhase.Offline => "OFFLINE",
             BridgePhase.Linking => "LINKING",
             BridgePhase.Online => "ONLINE",
+            BridgePhase.Working => "WORKING",
+            BridgePhase.PlayTesting => "PLAY TESTING",
             BridgePhase.Fault => "FAULT",
             _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null),
         };
@@ -37,7 +44,9 @@ namespace Feeder.MCP.Editor.UI
         {
             BridgePhase.Offline => 0.08f,
             BridgePhase.Linking => 0.5f,
-            BridgePhase.Online => 1f,
+            BridgePhase.Online => 0.75f,
+            BridgePhase.Working => 1f,
+            BridgePhase.PlayTesting => 1f,
             BridgePhase.Fault => 0.2f,
             _ => throw new ArgumentOutOfRangeException(nameof(phase), phase, null),
         };

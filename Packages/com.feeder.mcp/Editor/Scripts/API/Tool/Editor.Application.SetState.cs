@@ -4,6 +4,7 @@ using System;
 using System.ComponentModel;
 using Feeder.McpPlugin;
 using Feeder.ReflectorNet.Utils;
+using Feeder.MCP.Editor.MatrixSpace;
 using Feeder.MCP.Editor.Utils;
 using UnityEditor;
 
@@ -50,6 +51,8 @@ namespace Feeder.MCP.Editor.API
                     var compilationErrorDetails = ScriptUtils.GetCompilationErrorDetails();
                     throw new Exception($"Unity project has compilation error. Please fix all compilation errors before doing this operation.\n{compilationErrorDetails}");
                 }
+                if (isPlaying && !EditorApplication.isPlaying)
+                    AgentActivity.MarkAgentPlay();
                 EditorApplication.isPlaying = isPlaying;
                 EditorApplication.isPaused = isPaused;
 

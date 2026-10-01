@@ -298,7 +298,7 @@ namespace Feeder.MCP.Editor.Matrix
 
                 var arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(invoke.ArgumentsJsonUtf8)
                                 ?? new Dictionary<string, JsonElement>();
-                var response = await tool.Run(invoke.OperationId, arguments, cts.Token);
+                var response = await manager.RunTool(tool, invoke.OperationId, arguments, cts.Token);
                 if (IsStatus(response, "Processing"))
                 {
                     deferred = true;
