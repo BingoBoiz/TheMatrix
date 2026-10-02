@@ -23,9 +23,13 @@ namespace Feeder.MCP.Editor.UI
         [MenuItem("Tools/Feeder/Space (experimental)", priority = -17)]
         public static void ShowMatrixSpace() => MatrixSpaceWindow.ShowWindow();
 
+        [MenuItem("Tools/Feeder/Hyper Testing (Experimental)", priority = -16)]
+        public static void ShowHyperTesting() => HyperTesting.HyperTestingWindow.ShowWindow();
+
         [MenuItem("Tools/Feeder/Skills", true)]
         [MenuItem("Tools/Feeder/Bridge", true)]
         [MenuItem("Tools/Feeder/Space (experimental)", true)]
+        [MenuItem("Tools/Feeder/Hyper Testing (Experimental)", true)]
         [MenuItem("Tools/Feeder/Server/Reinstall Binaries", true)]
         [MenuItem("Tools/Feeder/Server/Delete Binaries", true)]
         [MenuItem("Tools/Feeder/Server/Open Logs", true)]

@@ -88,6 +88,9 @@ namespace Feeder.MCP.Editor.API
             if (string.IsNullOrEmpty(methodName))
                 throw new Exception($"'{nameof(methodName)}' cannot be null or empty.");
 
+            if (HyperTesting.HyperTestingActivation.LooksLikeActivationAttempt(csharpCode))
+                throw new Exception(HyperTesting.HyperTestingActivation.ActivationRefusal);
+
             string codeToCompile;
             if (isMethodBody)
             {

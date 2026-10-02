@@ -6,6 +6,22 @@ All notable changes to this package are documented here.
 
 ### Added
 
+- **Hyper Testing Mode (Experimental)** (**Tools > Feeder > Hyper Testing (Experimental)**, Windows only):
+  several clone editors play test one project in parallel, each driven by its own `hyper-playtester-N`
+  subagent.
+  - **Clones:** each clone links `Assets` and the embedded packages back to the project through directory
+    junctions, gets its own `Library` copy and its own server port, and runs as a light, read-only runner
+    (auto refresh off, in-process import, asset writes blocked, frame cap and lowest quality in play mode,
+    PlayerPrefs isolated per clone).
+  - **Switch:** it is off by default and stays off for anyone who updates the package. Only a person can
+    turn it on, by ticking a box and typing the project folder name in the window. The switch is per
+    machine and per project, and turns off again on every package update. `script-execute` and
+    `reflection-method-call` refuse code that touches it.
+  - **Tool and skill:** the new `hyper-testing` tool (status, up, refresh, down, purge, ram) runs the clone
+    pool behind a free-RAM gate. The `matrix-hyper-testing` skill guides the orchestrating agent.
+  - **`HyperTesting/` folder:** a config file and a journal (clone issues, play-test issues, RAM
+    observations with a 30 s sampler, playbook, Matrix improvements) where agents record what went wrong
+    and what worked.
 - Skill `matrix-shared-editor`: the protocol for several agents and people on one Editor - an
   `agent-editor-lock` claim before compiling or playing, and a written test-case handoff when the
   Editor is busy. It is a convention between sessions; Matrix does not enforce it yet.

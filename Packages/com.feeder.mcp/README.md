@@ -91,6 +91,26 @@ Run **Tools > Feeder > Setup...** once on each machine. It:
 - writes the Claude Code MCP config, then installs or verifies the Claude Code CLI (Node.js is
   installed with winget if missing).
 
+## Hyper Testing Mode (Experimental)
+
+Several clone editors play test one project in parallel, each driven by its own `hyper-playtester-N`
+subagent. It is off by default, Windows only, and only a person can turn it on, from
+**Tools > Feeder > Hyper Testing (Experimental)**. The switch is per machine and per project, and turns off
+again on every package update.
+
+- **Clones:** `up` creates the clones in `<project>.HyperClones/hc<N>`. `Assets` and the embedded packages
+  are junctions to the project, and each clone has its own `Library` and server port. The clones start
+  one after another behind a free-RAM gate.
+- **Refreshing:** after a code change, `refresh` recompiles the clones one at a time.
+- **Running cases:** the agent following the `matrix-hyper-testing` skill splits test cases over the
+  clones and spawns the play testers in parallel.
+- **Results and journal:** results go to `HyperTesting/Runs/`, and the journal goes to
+  `HyperTesting/Journal/`.
+- **Removing clones:** use the window's **Delete clones** button. Never delete a clone folder
+  recursively by hand: its `Assets` is a junction to the project.
+
+Restart Claude Code once after the first enable so it picks up `.claude/agents/`.
+
 ## Platform support
 
 The package currently includes the local server binary for Windows x64. The Unity editor code

@@ -95,6 +95,9 @@ namespace Feeder.MCP.Editor.API
             bool executeInMainThread = true
         )
         {
+            if (HyperTesting.HyperTestingActivation.LooksLikeActivationAttempt($"{filter.Namespace} {filter.TypeName} {SerializeForGuard(inputParameters)}"))
+                throw new System.Exception(HyperTesting.HyperTestingActivation.ActivationRefusal);
+
             // Enhance filter with input parameters if no input parameters specified in the filter.
             if ((filter.InputParameters?.Count ?? 0) == 0 && (inputParameters?.Count ?? 0) > 0)
                 filter.EnhanceInputParameters(inputParameters);
@@ -191,6 +194,13 @@ namespace Feeder.MCP.Editor.API
                 return MainThread.Instance.Run(action);
 
             return action();
+        }
+
+        static string SerializeForGuard(SerializedMemberList? parameters)
+        {
+            if (parameters == null)
+                return string.Empty;
+            return string.Join(" ", parameters.Select(p => $"{p.typeName} {p.name} {p.valueJsonElement?.GetRawText()}"));
         }
     }
 }
