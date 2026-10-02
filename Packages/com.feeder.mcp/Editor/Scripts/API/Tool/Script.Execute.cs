@@ -198,6 +198,52 @@ namespace Feeder.MCP.Editor.API
             => AssemblyUtils.AllAssemblies.Any(a =>
                 string.Equals(a.GetName().Name, assemblyName, StringComparison.Ordinal));
 
+        // statics reset on domain reload, so the cache only has to track assemblies loaded since then
+        static MetadataReference[]? cachedReferences;
+        static int cachedReferenceSourceCount = -1;
+
+        static MetadataReference[] GetMetadataReferences(ILogger? logger)
+        {
+            var sources = AssemblyUtils.AllAssemblies
+                .Where(a => !a.IsDynamic) // Exclude dynamic assemblies
+                .Where(a => !string.IsNullOrEmpty(a.Location))
+                .ToArray();
+
+            if (cachedReferences != null && cachedReferenceSourceCount == sources.Length)
+                return cachedReferences;
+
+            cachedReferences = sources
+                .Select(a =>
+                {
+                    try
+                    {
+                        return MetadataReference.CreateFromFile(a.Location);
+                    }
+                    catch (DirectoryNotFoundException ex)
+                    {
+                        logger?.LogWarning(ex, "Directory not found for assembly '{AssemblyName}' at '{Location}': {Error}",
+                            a.GetName().Name, a.Location, ex.Message);
+                        return null;
+                    }
+                    catch (FileNotFoundException ex)
+                    {
+                        logger?.LogWarning(ex, "File not found for assembly '{AssemblyName}' at '{Location}': {Error}",
+                            a.GetName().Name, a.Location, ex.Message);
+                        return null;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger?.LogWarning(ex, "Failed to load metadata reference for assembly '{AssemblyName}' at '{Location}': {Error}",
+                            a.GetName().Name, a.Location, ex.Message);
+                        return null;
+                    }
+                })
+                .OfType<MetadataReference>()
+                .ToArray();
+            cachedReferenceSourceCount = sources.Length;
+            return cachedReferences;
+        }
+
         static bool ExecuteCSharpCode(
             string className,
             string methodName,
@@ -234,36 +280,7 @@ namespace Feeder.MCP.Editor.API
             var compilation = CSharpCompilation.Create(
                 assemblyName: "DynamicAssembly",
                 syntaxTrees: new[] { CSharpSyntaxTree.ParseText(code) },
-                references: AssemblyUtils.AllAssemblies
-                    .Where(a => !a.IsDynamic) // Exclude dynamic assemblies
-                    .Where(a => !string.IsNullOrEmpty(a.Location))
-                    .Select(a =>
-                    {
-                        try
-                        {
-                            return MetadataReference.CreateFromFile(a.Location);
-                        }
-                        catch (DirectoryNotFoundException ex)
-                        {
-                            logger?.LogWarning(ex, "Directory not found for assembly '{AssemblyName}' at '{Location}': {Error}",
-                                a.GetName().Name, a.Location, ex.Message);
-                            return null;
-                        }
-                        catch (FileNotFoundException ex)
-                        {
-                            logger?.LogWarning(ex, "File not found for assembly '{AssemblyName}' at '{Location}': {Error}",
-                                a.GetName().Name, a.Location, ex.Message);
-                            return null;
-                        }
-                        catch (Exception ex)
-                        {
-                            logger?.LogWarning(ex, "Failed to load metadata reference for assembly '{AssemblyName}' at '{Location}': {Error}",
-                                a.GetName().Name, a.Location, ex.Message);
-                            return null;
-                        }
-                    })
-                    .OfType<MetadataReference>()
-                    .ToArray(),
+                references: GetMetadataReferences(logger),
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
             );
 

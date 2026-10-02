@@ -91,7 +91,7 @@ namespace Feeder.MCP
 
                 var logEntry = new LogEntry(
                     message: cleanMessage,
-                    stackTrace: stackTrace,
+                    stackTrace: type == LogType.Log ? null : stackTrace,
                     logType: type);
 
                 _logStorage.Append(logEntry);

@@ -58,7 +58,10 @@ namespace Feeder.MCP.Editor.API
                 lastMinutes: lastMinutes
             );
 
-            return logs;
+            if (includeStackTrace)
+                return logs;
+
+            return Array.ConvertAll(logs, log => new LogEntry(log.LogType, log.Message, log.Timestamp));
         }
     }
 }

@@ -16,6 +16,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
     {
         private const int CurrentSchemaVersion = 2;
         private const double PersistDebounceSeconds = 0.5;
+        private const int MaxPersistedEntries = 200;
 
         [Serializable]
         public sealed class TranscriptSnapshot
@@ -181,14 +182,17 @@ namespace Feeder.MCP.Editor.MatrixSpace
             record.TotalCacheCreationTokens = session.TotalCacheCreationTokens;
             record.LastState = (int)session.State;
 
-            while (record.Transcript.Count > session.Transcript.Count)
+            var first = Math.Max(0, session.Transcript.Count - MaxPersistedEntries);
+            var count = session.Transcript.Count - first;
+
+            while (record.Transcript.Count > count)
                 record.Transcript.RemoveAt(record.Transcript.Count - 1);
 
-            for (var i = 0; i < session.Transcript.Count; i++)
+            for (var i = 0; i < count; i++)
             {
                 if (i == record.Transcript.Count)
                     record.Transcript.Add(new TranscriptSnapshot());
-                record.Transcript[i].Capture(session.Transcript[i]);
+                record.Transcript[i].Capture(session.Transcript[first + i]);
             }
 
             SchedulePersist();

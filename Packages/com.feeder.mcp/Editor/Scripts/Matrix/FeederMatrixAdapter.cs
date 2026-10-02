@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -349,47 +350,52 @@ namespace Feeder.MCP.Editor.Matrix
 
         static byte[] SerializeCallToolResult(ResponseCallTool response, bool isError)
         {
-            var content = new JsonArray();
+            // written straight to utf-8: large image payloads would otherwise be copied once per intermediate form
+            using var stream = new MemoryStream();
+            var writer = new Utf8JsonWriter(stream);
+            writer.WriteStartObject();
+            writer.WriteBoolean("isError", isError);
+            writer.WriteStartArray("content");
             foreach (var block in response.Content ?? new List<ContentBlock>())
             {
                 var type = (block.Type ?? "text").ToLowerInvariant();
-                var json = new JsonObject { ["type"] = type };
+                writer.WriteStartObject();
                 switch (type)
                 {
                     case "image":
                     case "audio":
-                        json["data"] = block.Data ?? string.Empty;
-                        json["mimeType"] = block.MimeType ?? string.Empty;
+                        writer.WriteString("type", type);
+                        writer.WriteString("data", block.Data ?? string.Empty);
+                        writer.WriteString("mimeType", block.MimeType ?? string.Empty);
                         break;
                     case "resource":
+                        writer.WriteString("type", type);
                         if (block.Resource != null)
                         {
-                            var resource = new JsonObject
-                            {
-                                ["uri"] = block.Resource.Uri,
-                                ["mimeType"] = block.Resource.MimeType,
-                            };
-                            if (!string.IsNullOrEmpty(block.Resource.Text)) resource["text"] = block.Resource.Text;
-                            if (!string.IsNullOrEmpty(block.Resource.Blob)) resource["blob"] = block.Resource.Blob;
-                            json["resource"] = resource;
+                            writer.WriteStartObject("resource");
+                            writer.WriteString("uri", block.Resource.Uri);
+                            writer.WriteString("mimeType", block.Resource.MimeType);
+                            if (!string.IsNullOrEmpty(block.Resource.Text)) writer.WriteString("text", block.Resource.Text);
+                            if (!string.IsNullOrEmpty(block.Resource.Blob)) writer.WriteString("blob", block.Resource.Blob);
+                            writer.WriteEndObject();
                         }
                         break;
                     default:
-                        json["type"] = "text";
-                        json["text"] = block.Text ?? string.Empty;
+                        writer.WriteString("type", "text");
+                        writer.WriteString("text", block.Text ?? string.Empty);
                         break;
                 }
-                content.Add(json);
+                writer.WriteEndObject();
             }
-
-            var root = new JsonObject
-            {
-                ["isError"] = isError,
-                ["content"] = content,
-            };
+            writer.WriteEndArray();
             if (response.StructuredContent != null)
-                root["structuredContent"] = JsonNode.Parse(response.StructuredContent.ToJsonString());
-            return Encoding.UTF8.GetBytes(root.ToJsonString());
+            {
+                writer.WritePropertyName("structuredContent");
+                response.StructuredContent.WriteTo(writer);
+            }
+            writer.WriteEndObject();
+            writer.Flush();
+            return stream.ToArray();
         }
 
         CancellationTokenSource CreateOperationCancellation(ToolInvoke invoke)

@@ -20,7 +20,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         static readonly string[] _uxmlPaths = EditorAssetLoader.GetEditorAssetPaths("Editor/UI/uxml/PlayTestFrame.uxml");
         static readonly string[] _ussPaths = EditorAssetLoader.GetEditorAssetPaths("Editor/UI/uss/PlayTestFrame.uss");
-        static readonly Type? _gameViewType = Type.GetType("UnityEditor.GameView,UnityEditor");
+        static readonly Type? _playModeViewType = Type.GetType("UnityEditor.PlayModeView,UnityEditor");
         static readonly ILogger _logger = UnityLoggerFactory.LoggerFactory.CreateLogger(nameof(PlayTestFrame));
 
         static PlayTestFrame()
@@ -32,7 +32,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         internal static void Show()
         {
-            foreach (var view in GameViews())
+            foreach (var view in PlayModeViews())
             {
                 var root = view.rootVisualElement;
                 if (root.Q(FrameName) != null)
@@ -46,7 +46,7 @@ namespace Feeder.MCP.Editor.MatrixSpace
 
         internal static void Hide()
         {
-            foreach (var view in GameViews())
+            foreach (var view in PlayModeViews())
                 view.rootVisualElement.Q(FrameName)?.RemoveFromHierarchy();
         }
 
@@ -64,14 +64,14 @@ namespace Feeder.MCP.Editor.MatrixSpace
                 Show();
         }
 
-        static IEnumerable<EditorWindow> GameViews()
+        static IEnumerable<EditorWindow> PlayModeViews()
         {
-            if (_gameViewType == null)
+            if (_playModeViewType == null)
             {
-                _logger.LogError("{method} UnityEditor.GameView type not found.", nameof(GameViews));
+                _logger.LogError("{method} UnityEditor.PlayModeView type not found.", nameof(PlayModeViews));
                 return Enumerable.Empty<EditorWindow>();
             }
-            return Resources.FindObjectsOfTypeAll(_gameViewType).OfType<EditorWindow>();
+            return Resources.FindObjectsOfTypeAll(_playModeViewType).OfType<EditorWindow>();
         }
 
         static VisualElement? Create()

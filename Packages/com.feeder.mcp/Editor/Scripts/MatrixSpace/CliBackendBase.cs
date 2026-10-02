@@ -271,12 +271,32 @@ namespace Feeder.MCP.Editor.MatrixSpace
         {
             while (_pendingEvents.TryDequeue(out var evt))
             {
+                CoalesceQueuedDeltas(evt);
+
                 if (evt.Kind == AgentEventKind.ProcessExited)
                     ReleaseProcess();
 
                 OnMainThreadEvent(evt);
                 EventReceived?.Invoke(evt);
             }
+        }
+
+        // one append per frame instead of one per token keeps the transcript's string growth linear
+        private void CoalesceQueuedDeltas(AgentEvent evt)
+        {
+            if (!evt.IsDelta || evt.Kind is not (AgentEventKind.AssistantText or AgentEventKind.AssistantThinking))
+                return;
+
+            StringBuilder? merged = null;
+            while (_pendingEvents.TryPeek(out var next) && next.IsDelta && next.Kind == evt.Kind &&
+                   _pendingEvents.TryDequeue(out next))
+            {
+                merged ??= new StringBuilder(evt.Text);
+                merged.Append(next.Text);
+            }
+
+            if (merged != null)
+                evt.Text = merged.ToString();
         }
 
         private void ReleaseProcess()

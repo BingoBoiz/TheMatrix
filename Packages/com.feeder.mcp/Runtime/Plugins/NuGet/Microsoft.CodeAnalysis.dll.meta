@@ -18,9 +18,9 @@ PluginImporter:
       settings:
         Exclude Editor: 0
   - first:
-      Any: 
+      Any:
     second:
-      enabled: 1
+      enabled: 0
       settings: {}
   - first:
       Editor: Editor

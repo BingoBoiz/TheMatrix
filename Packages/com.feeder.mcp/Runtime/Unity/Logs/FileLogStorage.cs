@@ -19,7 +19,7 @@ namespace Feeder.MCP
 
     public class FileLogStorage : ILogStorage, IDisposable
     {
-        protected const int DefaultMaxFileSizeMB = 512;
+        protected const int DefaultMaxFileSizeMB = 32;
 
         protected readonly ILogger _logger;
         protected readonly string _directoryPath;
